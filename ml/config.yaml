@@ -1,0 +1,16 @@
+model_path: yolo11n.pt
+confidence_threshold: 0.35
+iou_threshold: 0.5
+device: null
+classes: null
+tracker: bytetrack.yaml
+night_hours: [22, 6]
+loitering_seconds: 60
+ocr_threshold: 0.5
+restricted_zones: {}
+enabled_modules:
+  tracking: true
+  anpr: false
+  face: false
+  intrusion: true
+  activity: true
