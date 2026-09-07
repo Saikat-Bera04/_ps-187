@@ -1,6 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos');
+
+@font-face {
+  font-family: "Geist Pixel Circle";
+  src: url("/fonts/GeistPixel-Circle.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* =========================================
    IBVAP LANDING PAGE STYLES
    ========================================= */
+
+:root {
+  --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-display: "BubbledotICG-FinePos", "Geist Pixel Circle", monospace;
+}
 
 .landing-container {
   position: relative;
@@ -10,7 +26,12 @@
   overflow: hidden;
   background-color: #000000;
   color: #ffffff;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+.landing-container,
+.landing-container * {
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
 }
 
 .landing-bg {
@@ -233,9 +254,10 @@
   margin: 0;
   color: #fff;
   font-size: clamp(32px, 6.2vw, 76px);
-  letter-spacing: -0.035em;
-  line-height: 1.1;
-  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  font-weight: 400;
+  font-family: var(--font-display), "BubbledotICG-FinePos", "Geist Pixel Circle", monospace !important;
 }
 
 .landing-headline .line {
@@ -244,6 +266,7 @@
   transform: translateY(14px);
   animation: headlineFade 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: var(--d);
+  font-family: var(--font-display), "BubbledotICG-FinePos", "Geist Pixel Circle", monospace !important;
 }
 
 .landing-subhead {
@@ -315,10 +338,11 @@
   align-items: baseline;
   color: #fff;
   font-size: clamp(20px, 2.4vw, 28px);
-  letter-spacing: -0.025em;
-  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   gap: 4px;
+  font-family: var(--font-display), "BubbledotICG-FinePos", "Geist Pixel Circle", monospace !important;
 }
 
 .landing-stat-label {
