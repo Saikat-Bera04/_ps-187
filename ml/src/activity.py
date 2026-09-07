@@ -1,6 +1,5 @@
 """Configurable, rule-based activity events."""
 
-from collections import defaultdict
 from datetime import datetime, time
 from math import hypot
 from typing import Any
@@ -14,6 +13,7 @@ class ActivityMonitor:
 		self.movement_pixels = movement_pixels
 		self._first_seen: dict[int, float] = {}
 		self._last_center: dict[int, tuple[float, float]] = {}
+		self._loitering_emitted: set[int] = set()
 
 	def evaluate(self, tracks: list[dict[str, Any]], timestamp: datetime | None = None) -> list[dict[str, Any]]:
 		now = timestamp or datetime.now()
@@ -26,8 +26,10 @@ class ActivityMonitor:
 			elapsed = now.timestamp() - first_seen
 			movement = hypot(center[0] - self._last_center.get(track_id, center)[0],
 							 center[1] - self._last_center.get(track_id, center)[1])
-			if elapsed >= self.loitering_seconds and movement <= self.movement_pixels:
+			if (elapsed >= self.loitering_seconds and movement <= self.movement_pixels
+					and track_id not in self._loitering_emitted):
 				events.append(self._event("LOITERING", "MEDIUM", track, {"duration_seconds": elapsed}))
+				self._loitering_emitted.add(track_id)
 			if self._is_night(now.time()) and movement > self.movement_pixels:
 				events.append(self._event("NIGHT_MOVEMENT", "MEDIUM", track, {}))
 			self._last_center[track_id] = center

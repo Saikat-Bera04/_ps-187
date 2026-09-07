@@ -1,8 +1,9 @@
 """Reusable Ultralytics YOLO detector with lazy, configurable loading."""
 
 from dataclasses import asdict, dataclass
-from pathlib import Path
 from typing import Any, Iterable
+
+import cv2
 
 
 @dataclass
@@ -41,6 +42,16 @@ class YOLODetector:
 			kwargs["device"] = self.device
 		results = model.predict(frame, **kwargs)
 		return self._parse_result(results[0]) if results else []
+
+	def draw(self, frame: Any, detections: list[dict[str, Any]]) -> Any:
+		output = frame.copy()
+		for detection in detections:
+			x1, y1, x2, y2 = [int(value) for value in detection["bbox"]]
+			label = f"{detection['class_name']} {detection['confidence']:.2f}"
+			cv2.rectangle(output, (x1, y1), (x2, y2), (0, 200, 0), 2)
+			cv2.putText(output, label, (x1, max(y1 - 8, 0)), cv2.FONT_HERSHEY_SIMPLEX,
+						0.5, (0, 200, 0), 1, cv2.LINE_AA)
+		return output
 
 	def _parse_result(self, result: Any) -> list[dict[str, Any]]:
 		names = result.names

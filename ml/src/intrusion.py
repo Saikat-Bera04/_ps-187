@@ -23,7 +23,7 @@ class VirtualFence:
 		events = []
 		for track in tracks:
 			bbox = track["bbox"]
-			center = ((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
+			center = ((bbox[0] + bbox[2]) / 2, bbox[3])
 			for zone_name, polygon in self.zones.items():
 				key = (zone_name, int(track["track_id"]))
 				current = point_in_polygon(center, polygon)

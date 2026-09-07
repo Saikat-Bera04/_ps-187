@@ -1,4 +1,6 @@
 model_path: yolo11n.pt
+dataset_yaml: data/traffic-detection-project/data.yaml
+camera_id: CAM_001
 confidence_threshold: 0.35
 iou_threshold: 0.5
 device: null
@@ -6,7 +8,9 @@ classes: null
 tracker: bytetrack.yaml
 night_hours: [22, 6]
 loitering_seconds: 60
+process_every_n_frames: 1
 ocr_threshold: 0.5
+face_cascade_path: null
 restricted_zones: {}
 enabled_modules:
   tracking: true
