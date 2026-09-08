@@ -9,7 +9,7 @@ export class BopController {
   }
 
   static async getById(req: Request, res: Response, next: NextFunction) {
-    try { res.json({ success: true, data: await BopService.getById(req.params.id) }); }
+    try { res.json({ success: true, data: await BopService.getById(String(req.params.id)) }); }
     catch (error) { next(error); }
   }
 
@@ -21,12 +21,12 @@ export class BopController {
   }
 
   static async update(req: Request, res: Response, next: NextFunction) {
-    try { res.json({ success: true, data: await BopService.update(req.params.id, req.body) }); }
+    try { res.json({ success: true, data: await BopService.update(String(req.params.id), req.body) }); }
     catch (error) { next(error); }
   }
 
   static async delete(req: Request, res: Response, next: NextFunction) {
-    try { res.json({ success: true, data: await BopService.delete(req.params.id) }); }
+    try { res.json({ success: true, data: await BopService.delete(String(req.params.id)) }); }
     catch (error) { next(error); }
   }
 }

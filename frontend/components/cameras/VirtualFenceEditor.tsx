@@ -11,19 +11,21 @@ interface Point {
 
 interface VirtualFenceEditorProps {
   cameraId: string;
-  onSave?: (polygon: Point[]) => void;
+  initialPoints?: Point[];
+  onSave?: (polygon: Point[]) => Promise<void>;
   className?: string;
 }
 
-export function VirtualFenceEditor({ cameraId, onSave, className = '' }: VirtualFenceEditorProps) {
+export function VirtualFenceEditor({ cameraId, initialPoints, onSave, className = '' }: VirtualFenceEditorProps) {
   const { showToast } = useToast();
   const [mode, setMode] = useState<'polygon' | 'line'>('polygon');
-  const [points, setPoints] = useState<Point[]>([
+  const [points, setPoints] = useState<Point[]>(initialPoints || [
     { x: 15, y: 80 },
     { x: 85, y: 80 },
     { x: 70, y: 40 },
     { x: 30, y: 40 },
   ]);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleCanvasClick = (e: React.MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -51,7 +53,7 @@ export function VirtualFenceEditor({ cameraId, onSave, className = '' }: Virtual
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (points.length < 3 && mode === 'polygon') {
       showToast({
         title: 'Incomplete Zone',
@@ -60,12 +62,23 @@ export function VirtualFenceEditor({ cameraId, onSave, className = '' }: Virtual
       });
       return;
     }
-    if (onSave) onSave(points);
-    showToast({
-      title: 'Virtual Fence Configured',
-      message: `Zone saved for camera ${cameraId}. Intrusion events will be dispatched on boundary breach.`,
-      type: 'success',
-    });
+    try {
+      setIsSaving(true);
+      if (onSave) await onSave(points);
+      showToast({
+        title: 'Virtual Fence Configured',
+        message: `Zone saved for camera ${cameraId}. Intrusion events will be dispatched on boundary breach.`,
+        type: 'success',
+      });
+    } catch {
+      showToast({
+        title: 'Zone Save Failed',
+        message: 'The virtual fence could not be saved to the camera configuration.',
+        type: 'error',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const pointsString = points.map((p) => `${p.x},${p.y}`).join(' ');
@@ -114,10 +127,11 @@ export function VirtualFenceEditor({ cameraId, onSave, className = '' }: Virtual
           </button>
           <button
             onClick={handleSave}
+            disabled={isSaving}
             className="px-3.5 py-1.5 rounded-[7px] text-xs font-bold bg-[#39D98A] text-[#071018] hover:bg-[#39D98A]/90 transition-colors flex items-center gap-1.5"
           >
             <Check className="w-3.5 h-3.5" />
-            Save Zone
+            {isSaving ? 'Saving...' : 'Save Zone'}
           </button>
         </div>
       </div>

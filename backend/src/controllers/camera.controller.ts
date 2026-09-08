@@ -11,7 +11,7 @@ export class CameraController {
   }
 
   static async getById(req: Request, res: Response, next: NextFunction) {
-    try { res.json({ success: true, data: await CameraService.getById(req.params.id) }); }
+    try { res.json({ success: true, data: await CameraService.getById(String(req.params.id)) }); }
     catch (error) { next(error); }
   }
 
@@ -28,10 +28,10 @@ export class CameraController {
 
   static async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const camera = await CameraService.update(req.params.id, req.body);
+      const camera = await CameraService.update(String(req.params.id), req.body);
       await AuditService.log({
         userId: req.user!.id, action: 'CAMERA_UPDATED', resource: 'Camera',
-        resourceId: req.params.id, ipAddress: req.ip, userAgent: req.headers['user-agent'],
+        resourceId: String(req.params.id), ipAddress: req.ip, userAgent: req.headers['user-agent'],
       });
       res.json({ success: true, data: camera });
     } catch (error) { next(error); }
@@ -39,26 +39,26 @@ export class CameraController {
 
   static async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await CameraService.delete(req.params.id);
+      const result = await CameraService.delete(String(req.params.id));
       await AuditService.log({
         userId: req.user!.id, action: 'CAMERA_DELETED', resource: 'Camera',
-        resourceId: req.params.id, ipAddress: req.ip, userAgent: req.headers['user-agent'],
+        resourceId: String(req.params.id), ipAddress: req.ip, userAgent: req.headers['user-agent'],
       });
       res.json({ success: true, data: result });
     } catch (error) { next(error); }
   }
 
   static async test(req: Request, res: Response, next: NextFunction) {
-    try { res.json({ success: true, data: await CameraService.testConnection(req.params.id) }); }
+    try { res.json({ success: true, data: await CameraService.testConnection(String(req.params.id)) }); }
     catch (error) { next(error); }
   }
 
   static async start(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await CameraService.start(req.params.id);
+      const result = await CameraService.start(String(req.params.id));
       await AuditService.log({
         userId: req.user!.id, action: 'CAMERA_STARTED', resource: 'Camera',
-        resourceId: req.params.id, ipAddress: req.ip, userAgent: req.headers['user-agent'],
+        resourceId: String(req.params.id), ipAddress: req.ip, userAgent: req.headers['user-agent'],
       });
       res.json({ success: true, data: result });
     } catch (error) { next(error); }
@@ -66,17 +66,28 @@ export class CameraController {
 
   static async stop(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await CameraService.stop(req.params.id);
+      const result = await CameraService.stop(String(req.params.id));
       await AuditService.log({
         userId: req.user!.id, action: 'CAMERA_STOPPED', resource: 'Camera',
-        resourceId: req.params.id, ipAddress: req.ip, userAgent: req.headers['user-agent'],
+        resourceId: String(req.params.id), ipAddress: req.ip, userAgent: req.headers['user-agent'],
       });
       res.json({ success: true, data: result });
     } catch (error) { next(error); }
   }
 
   static async health(req: Request, res: Response, next: NextFunction) {
-    try { res.json({ success: true, data: await CameraService.getHealth(req.params.id) }); }
+    try { res.json({ success: true, data: await CameraService.getHealth(String(req.params.id)) }); }
     catch (error) { next(error); }
+  }
+
+  static async replaceZones(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await CameraService.replaceZones(String(req.params.id), req.body.zones);
+      await AuditService.log({
+        userId: req.user!.id, action: 'CAMERA_UPDATED', resource: 'CameraZone',
+        resourceId: String(req.params.id), ipAddress: req.ip, userAgent: req.headers['user-agent'],
+      });
+      res.json({ success: true, data: result });
+    } catch (error) { next(error); }
   }
 }

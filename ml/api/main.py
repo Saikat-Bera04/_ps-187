@@ -1,5 +1,6 @@
 """FastAPI entry point for frame analysis."""
 
+import base64
 import logging
 import os
 from datetime import datetime, timezone
@@ -14,7 +15,8 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 try:
-	from ml.api.backend_client import forward_events
+	from ml.api.backend_client import forward_events, report_camera_status
+	from ml.api.stream_worker import CameraStreamConfig, CameraStreamManager
 	from ml.src.activity import ActivityMonitor
 	from ml.src.anpr import ANPRPipeline
 	from ml.src.detector import YOLODetector, select_device
@@ -24,7 +26,8 @@ try:
 	from ml.src.pipeline import VideoPipeline
 	from ml.src.tracker import ObjectTracker
 except ModuleNotFoundError:
-	from api.backend_client import forward_events
+	from api.backend_client import forward_events, report_camera_status
+	from api.stream_worker import CameraStreamConfig, CameraStreamManager
 	from src.activity import ActivityMonitor
 	from src.anpr import ANPRPipeline
 	from src.detector import YOLODetector, select_device
@@ -77,6 +80,44 @@ class SimulateIntrusionRequest(BaseModel):
 	bbox: list[float] = Field(default=[421, 183, 523, 462])
 
 
+class CameraZoneRequest(BaseModel):
+	name: str
+	zone_type: str = "RESTRICTED"
+	coordinates: list[list[float]]
+
+
+class CameraStartRequest(BaseModel):
+	camera_id: str = Field(min_length=1)
+	bop_id: str = Field(min_length=1)
+	stream_url: str = Field(min_length=1)
+	zones: list[CameraZoneRequest] = Field(default_factory=list)
+	process_every_n_frames: int = Field(default=CONFIG.get("process_every_n_frames", 1), ge=1, le=60)
+
+
+class CameraTestRequest(BaseModel):
+	camera_id: str = Field(min_length=1)
+	stream_url: str = Field(min_length=1)
+
+
+def _build_stream_pipeline(camera_id: str) -> VideoPipeline:
+	"""Create isolated tracker and rule state for one long-running camera."""
+	stream_detector = YOLODetector(str(model_path), CONFIG["confidence_threshold"], device, CONFIG.get("classes"))
+	stream_tracker = ObjectTracker(stream_detector, CONFIG.get("tracker", "bytetrack.yaml"))
+	return VideoPipeline(
+		stream_detector,
+		stream_tracker,
+		VirtualFence({}),
+		ActivityMonitor(CONFIG["loitering_seconds"], tuple(CONFIG["night_hours"])),
+		face_detector,
+		camera_id,
+		CONFIG.get("process_every_n_frames", 1),
+		ANPRPipeline() if CONFIG.get("enabled_modules", {}).get("anpr", False) else None,
+	)
+
+
+stream_manager = CameraStreamManager(_build_stream_pipeline, forward_events, report_camera_status)
+
+
 @app.get("/")
 def root() -> dict[str, str]:
 	return {"service": "IBVAP ML API", "health": "/health", "docs": "/docs"}
@@ -86,7 +127,7 @@ def root() -> dict[str, str]:
 def health() -> dict[str, Any]:
 	return {"status": "ok", "device": device, "model_loaded": detector.model_loaded,
 			"model_path": str(model_path), "face_available": face_detector is not None,
-			"enabled_modules": CONFIG.get("enabled_modules", {})}
+			"enabled_modules": CONFIG.get("enabled_modules", {}), "active_streams": stream_manager.status()}
 
 
 async def _decode_image(file: UploadFile) -> np.ndarray:
@@ -113,11 +154,16 @@ async def _analyze_image(file: UploadFile, camera_id: str, bop_id: str | None = 
 	result["face_status"] = "available" if face_detector is not None else "disabled"
 
 	if FORWARD_TO_BACKEND and result["events"]:
+		snapshot = None
+		encoded, image_bytes = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 85])
+		if encoded:
+			snapshot = base64.b64encode(image_bytes.tobytes()).decode("ascii")
 		result["backend"] = forward_events(
 			result["events"],
 			camera_id=camera_id,
 			bop_id=bop_id or DEFAULT_BOP_ID,
 			timestamp=result["timestamp"],
+			evidence_snapshot=snapshot,
 		)
 	return result
 
@@ -182,3 +228,35 @@ def simulate_intrusion(body: SimulateIntrusionRequest) -> dict[str, Any]:
 		timestamp=timestamp,
 	)
 	return {"simulated": raw_event, "backend": backend}
+
+
+@app.get("/cameras")
+def camera_workers() -> dict[str, Any]:
+	return {"streams": stream_manager.status()}
+
+
+@app.post("/cameras/start")
+def start_camera(body: CameraStartRequest) -> dict[str, Any]:
+	config = CameraStreamConfig(
+		camera_id=body.camera_id,
+		bop_id=body.bop_id,
+		stream_url=body.stream_url,
+		zones=[zone.model_dump() for zone in body.zones],
+		process_every_n_frames=body.process_every_n_frames,
+	)
+	return stream_manager.start(config)
+
+
+@app.post("/cameras/{camera_id}/stop")
+def stop_camera(camera_id: str) -> dict[str, Any]:
+	return stream_manager.stop(camera_id)
+
+
+@app.post("/cameras/test")
+def test_camera(body: CameraTestRequest) -> dict[str, Any]:
+	return CameraStreamManager.test(body.stream_url)
+
+
+@app.on_event("shutdown")
+def shutdown_camera_workers() -> None:
+	stream_manager.stop_all()

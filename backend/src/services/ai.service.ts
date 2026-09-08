@@ -4,6 +4,7 @@ import { AppError } from '../utils/app-error';
 import { ThreatService } from './threat.service';
 import { WsEvents } from '../websocket/events';
 import type { AiEventInput } from '../validators/ai.validators';
+import { StorageClient } from '../integrations/storage/minio-client';
 
 const EVENT_TYPE_MAP: Record<string, EventType> = {
   INTRUSION: 'INTRUSION',
@@ -58,10 +59,11 @@ function normalizeInput(raw: AiEventInput) {
     bbox,
     zone,
     metadata: raw.metadata || {},
+    evidence: raw.evidence,
   };
 }
 
-async function nextCode(prefix: 'EVT' | 'ALT'): Promise<string> {
+async function nextCode(prefix: 'EVT' | 'ALT' | 'EVD'): Promise<string> {
   if (prefix === 'EVT') {
     const latest = await prisma.event.findFirst({
       orderBy: { createdAt: 'desc' },
@@ -73,6 +75,19 @@ async function nextCode(prefix: 'EVT' | 'ALT'): Promise<string> {
       if (!Number.isNaN(parsed)) num = parsed + 1;
     }
     return `EVT-${num}`;
+  }
+
+  if (prefix === 'EVD') {
+    const latest = await prisma.evidence.findFirst({
+      orderBy: { createdAt: 'desc' },
+      select: { evidenceCode: true },
+    });
+    let num = 10001;
+    if (latest?.evidenceCode) {
+      const parsed = parseInt(latest.evidenceCode.replace('EVD-', ''), 10);
+      if (!Number.isNaN(parsed)) num = parsed + 1;
+    }
+    return `EVD-${num}`;
   }
 
   const latest = await prisma.alert.findFirst({
@@ -104,10 +119,9 @@ export class AiService {
       throw AppError.notFound(`Camera not found: ${input.cameraId}`);
     }
 
-    const bopCode = input.bopId || camera.bop.code;
+    const bopCode = camera.bop.code;
     if (input.bopId && input.bopId !== camera.bop.code) {
-      const bop = await prisma.bop.findFirst({ where: { code: input.bopId } });
-      if (!bop) throw AppError.notFound(`BOP not found: ${input.bopId}`);
+      throw AppError.badRequest(`Camera ${input.cameraId} does not belong to BOP ${input.bopId}`);
     }
 
     const hour = input.timestamp.getHours();
@@ -130,63 +144,96 @@ export class AiService {
     const alertCode = await nextCode('ALT');
     const severity = threat.severity as Severity;
 
-    const result = await prisma.$transaction(async (tx) => {
-      const event = await tx.event.create({
-        data: {
-          eventCode,
-          eventType: input.eventType,
-          objectType: input.objectType,
-          cameraId: camera.id,
-          bopId: camera.bop.id,
-          trackId: input.trackId,
-          confidence: input.confidence,
-          zone: input.zone,
-          severity,
-          threatScore: threat.score,
-          timestamp: input.timestamp,
-        },
-      });
+    let storedEvidence: { evidenceCode: string; filePath: string; hash: string; fileSizeKB: number } | undefined;
+    if (severity === 'CRITICAL' && input.evidence) {
+      const content = Buffer.from(input.evidence.contentBase64, 'base64');
+      if (!content.length || content.length > 7 * 1024 * 1024) {
+        throw AppError.badRequest('Evidence snapshot is empty or exceeds the 7 MB limit');
+      }
+      const evidenceCode = await nextCode('EVD');
+      const stored = await StorageClient.storeSnapshot(evidenceCode, content, input.evidence.mimeType);
+      storedEvidence = { evidenceCode, ...stored };
+    }
 
-      if (input.bbox) {
-        await tx.detection.create({
+    let result: { event: { id: string; eventCode: string; timestamp: Date; eventType: EventType; objectType: ObjectType; trackId: number | null; confidence: number; zone: string; severity: Severity; threatScore: number; status: string }; alert: { alertCode: string; timestamp: Date; eventType: string; severity: Severity; threatScore: number; status: any; description: string }; evidence?: { evidenceCode: string; evidenceType: string; hash: string; timestamp: Date; verificationStatus: string } };
+    try {
+      result = await prisma.$transaction(async (tx) => {
+        const event = await tx.event.create({
           data: {
-            eventId: event.id,
-            cameraId: camera.id,
+            eventCode,
+            eventType: input.eventType,
             objectType: input.objectType,
-            trackId: input.trackId ?? 0,
+            cameraId: camera.id,
+            bopId: camera.bop.id,
+            trackId: input.trackId,
             confidence: input.confidence,
-            bboxX: input.bbox[0],
-            bboxY: input.bbox[1],
-            bboxW: input.bbox[2] - input.bbox[0],
-            bboxH: input.bbox[3] - input.bbox[1],
-            label: input.objectType,
+            zone: input.zone,
+            severity,
+            threatScore: threat.score,
             timestamp: input.timestamp,
           },
         });
-      }
 
-      const description = buildDescription(input.eventType, input.objectType, input.zone, camera.cameraCode);
-      const alert = await tx.alert.create({
-        data: {
-          alertCode,
-          eventId: event.id,
-          cameraId: camera.id,
-          bopId: camera.bop.id,
-          eventType: input.eventType,
-          severity,
-          threatScore: threat.score,
-          description,
-          timestamp: input.timestamp,
-        },
+        if (input.bbox) {
+          await tx.detection.create({
+            data: {
+              eventId: event.id,
+              cameraId: camera.id,
+              objectType: input.objectType,
+              trackId: input.trackId ?? 0,
+              confidence: input.confidence,
+              bboxX: input.bbox[0],
+              bboxY: input.bbox[1],
+              bboxW: input.bbox[2] - input.bbox[0],
+              bboxH: input.bbox[3] - input.bbox[1],
+              label: input.objectType,
+              timestamp: input.timestamp,
+            },
+          });
+        }
+
+        const description = buildDescription(input.eventType, input.objectType, input.zone, camera.cameraCode);
+        const alert = await tx.alert.create({
+          data: {
+            alertCode,
+            eventId: event.id,
+            cameraId: camera.id,
+            bopId: camera.bop.id,
+            eventType: input.eventType,
+            severity,
+            threatScore: threat.score,
+            description,
+            timestamp: input.timestamp,
+          },
+        });
+
+        const evidence = storedEvidence ? await tx.evidence.create({
+          data: {
+            evidenceCode: storedEvidence.evidenceCode,
+            evidenceType: 'SNAPSHOT',
+            hash: storedEvidence.hash,
+            filePath: storedEvidence.filePath,
+            fileSizeKB: storedEvidence.fileSizeKB,
+            recordedBy: 'AI_SERVICE',
+            recordedOrg: 'IBVAP',
+            timestamp: input.timestamp,
+            eventId: event.id,
+            cameraId: camera.id,
+            bopId: camera.bop.id,
+          },
+        }) : undefined;
+
+        await tx.camera.update({
+          where: { id: camera.id },
+          data: { lastSeen: new Date(), aiStatus: 'ACTIVE' },
+        });
+
+        return { event, alert, evidence };
       });
-
-      await tx.camera.update({
-        where: { id: camera.id },
-        data: { lastSeen: new Date(), aiStatus: 'ACTIVE' },
-      });
-
-      return { event, alert };
-    });
+    } catch (error) {
+      if (storedEvidence) await StorageClient.remove(storedEvidence.filePath).catch(() => undefined);
+      throw error;
+    }
 
     const eventPayload = {
       eventId: result.event.eventCode,
@@ -201,6 +248,7 @@ export class AiService {
       severity: result.event.severity,
       threatScore: result.event.threatScore,
       status: result.event.status,
+      evidenceId: result.evidence?.evidenceCode,
     };
 
     const alertPayload = {
@@ -218,6 +266,18 @@ export class AiService {
 
     WsEvents.newEvent(bopCode, eventPayload);
     WsEvents.newAlert(bopCode, alertPayload);
+    if (result.evidence) {
+      WsEvents.evidenceCreated(bopCode, {
+        evidenceId: result.evidence.evidenceCode,
+        eventId: result.event.eventCode,
+        cameraId: camera.cameraCode,
+        bopId: bopCode,
+        evidenceType: result.evidence.evidenceType,
+        hash: result.evidence.hash,
+        verificationStatus: result.evidence.verificationStatus,
+        timestamp: result.evidence.timestamp.toISOString(),
+      });
+    }
 
     return {
       event: eventPayload,

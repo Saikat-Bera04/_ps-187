@@ -141,13 +141,13 @@ export class AuthService {
     const accessToken = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       config.jwtSecret,
-      { expiresIn: config.jwtAccessExpiry as string },
+      { expiresIn: config.jwtAccessExpiry as jwt.SignOptions['expiresIn'] },
     );
 
     const refreshToken = jwt.sign(
       { userId: user.id, type: 'refresh' },
       config.jwtRefreshSecret,
-      { expiresIn: config.jwtRefreshExpiry as string },
+      { expiresIn: config.jwtRefreshExpiry as jwt.SignOptions['expiresIn'] },
     );
 
     // Reset failed attempts and save refresh token
@@ -200,13 +200,13 @@ export class AuthService {
       const newAccessToken = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
         config.jwtSecret,
-        { expiresIn: config.jwtAccessExpiry as string },
+        { expiresIn: config.jwtAccessExpiry as jwt.SignOptions['expiresIn'] },
       );
 
       const newRefreshToken = jwt.sign(
         { userId: user.id, type: 'refresh' },
         config.jwtRefreshSecret,
-        { expiresIn: config.jwtRefreshExpiry as string },
+        { expiresIn: config.jwtRefreshExpiry as jwt.SignOptions['expiresIn'] },
       );
 
       await prisma.user.update({

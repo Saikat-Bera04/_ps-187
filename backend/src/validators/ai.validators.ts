@@ -20,6 +20,10 @@ export const aiEventSchema = z.object({
   zone_id: z.string().optional(),
   zone: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
+  evidence: z.object({
+    contentBase64: z.string().min(1),
+    mimeType: z.enum(['image/jpeg', 'image/png']).default('image/jpeg'),
+  }).optional(),
 }).refine(
   (data) => !!(data.cameraId || data.camera_id),
   { message: 'cameraId is required', path: ['cameraId'] },
@@ -29,3 +33,13 @@ export const aiEventSchema = z.object({
 );
 
 export type AiEventInput = z.infer<typeof aiEventSchema>;
+
+export const aiCameraStatusSchema = z.object({
+  cameraId: z.string().min(1),
+  status: z.enum(['ONLINE', 'OFFLINE', 'DEGRADED']),
+  aiStatus: z.enum(['ACTIVE', 'INACTIVE', 'ERROR']),
+  fps: z.number().min(0).max(240).optional(),
+  message: z.string().max(500).optional(),
+});
+
+export type AiCameraStatusInput = z.infer<typeof aiCameraStatusSchema>;

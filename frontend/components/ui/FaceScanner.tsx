@@ -19,7 +19,7 @@ type ScanState =
   | 'error';
 
 export function FaceScanner({ onVerificationComplete, accessToken }: FaceScannerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number>(0);
