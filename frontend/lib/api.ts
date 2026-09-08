@@ -31,6 +31,28 @@ let watchlistVehiclesState: WatchlistVehicle[] = [...mockWatchlistVehicles];
 
 const delay = (ms = 150) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const API_BASE = 'http://localhost:4000/api';
+
+async function fetchApi(endpoint: string, options: RequestInit = {}) {
+  let token = '';
+  if (typeof window !== 'undefined') {
+    token = localStorage.getItem('ibvap_token') || '';
+  }
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+
+  const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error?.message || 'API request failed');
+  }
+  return data.data;
+}
+
 // ─── Dashboard (Section 21-22) ──────────────────────────
 export async function getDashboardStats() {
   await delay(120);
@@ -53,8 +75,13 @@ export async function getDashboardStats() {
 
 // ─── Cameras (Section 24-26) ─────────────────────────────
 export async function getCameras(): Promise<Camera[]> {
-  await delay(150);
-  return [...camerasState];
+  try {
+    return await fetchApi('/cameras');
+  } catch (err) {
+    console.warn('Backend unavailable, returning mock cameras', err);
+    await delay(150);
+    return [...camerasState];
+  }
 }
 
 export async function getCamera(id: string): Promise<Camera | undefined> {
@@ -92,8 +119,13 @@ export async function toggleCameraStatus(id: string): Promise<Camera | undefined
 
 // ─── Events (Section 29-30) ──────────────────────────────
 export async function getEvents(): Promise<IBVAPEvent[]> {
-  await delay(150);
-  return [...eventsState];
+  try {
+    return await fetchApi('/events');
+  } catch (err) {
+    console.warn('Backend unavailable, returning mock events', err);
+    await delay(150);
+    return [...eventsState];
+  }
 }
 
 export async function getEvent(id: string): Promise<IBVAPEvent | undefined> {
@@ -108,8 +140,13 @@ export async function getEventTimeline(eventId: string): Promise<TimelineEntry[]
 
 // ─── Alerts (Section 27-28) ──────────────────────────────
 export async function getAlerts(): Promise<Alert[]> {
-  await delay(150);
-  return [...alertsState];
+  try {
+    return await fetchApi('/alerts');
+  } catch (err) {
+    console.warn('Backend unavailable, returning mock alerts', err);
+    await delay(150);
+    return [...alertsState];
+  }
 }
 
 export async function updateAlertStatus(alertId: string, status: AlertStatus): Promise<Alert | undefined> {
@@ -126,8 +163,13 @@ export async function updateAlertStatus(alertId: string, status: AlertStatus): P
 
 // ─── Evidence (Section 32-33) ────────────────────────────
 export async function getEvidence(): Promise<Evidence[]> {
-  await delay(150);
-  return [...evidenceState];
+  try {
+    return await fetchApi('/evidence');
+  } catch (err) {
+    console.warn('Backend unavailable, returning mock evidence', err);
+    await delay(150);
+    return [...evidenceState];
+  }
 }
 
 export async function getEvidenceById(id: string): Promise<Evidence | undefined> {
@@ -228,8 +270,14 @@ export async function getAnalytics() {
 
 // ─── System Health (Section 38) ──────────────────────────
 export async function getSystemHealth(): Promise<SystemHealth> {
-  await delay(150);
-  return mockSystemHealth;
+  try {
+    const data = await fetchApi('/system/health');
+    return data;
+  } catch (err) {
+    console.warn('Backend unavailable, returning mock system health', err);
+    await delay(150);
+    return mockSystemHealth;
+  }
 }
 
 // ─── BOPs & User ─────────────────────────────────────────
@@ -239,8 +287,14 @@ export async function getBOPs(): Promise<BOP[]> {
 }
 
 export async function getCurrentUser(): Promise<User> {
-  await delay(80);
-  return mockUser;
+  try {
+    const data = await fetchApi('/auth/me');
+    return data;
+  } catch (err) {
+    console.warn('Backend unavailable, returning mock user', err);
+    await delay(80);
+    return mockUser;
+  }
 }
 
 // ─── Global Search (Section 40) ──────────────────────────

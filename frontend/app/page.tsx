@@ -94,8 +94,8 @@ export default function LandingPage() {
       <main className="landing-page">
         {/* ─── FLOATING PILL HEADER ─── */}
         <header className="landing-header">
-          <Link href="/" className="landing-logo" aria-label="IBVAP Home">
-            <Shield className="w-5 h-5 text-[#071018]" />
+          <Link href="/" className="landing-logo overflow-hidden flex items-center justify-center p-1" aria-label="IBVAP Home">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </Link>
 
           <nav className="landing-nav-pill landing-desktop-nav">
@@ -249,7 +249,9 @@ export default function LandingPage() {
         >
           <div className="flex justify-between items-center pb-6 border-b border-[#263442]">
             <div className="flex items-center gap-2 text-white font-bold">
-              <Shield className="w-5 h-5 text-[#37B9FF]" />
+              <div className="w-7 h-7 rounded-md bg-[#37B9FF]/15 border border-[#37B9FF]/30 flex items-center justify-center overflow-hidden">
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+              </div>
               <span>IBVAP Command</span>
             </div>
             <button

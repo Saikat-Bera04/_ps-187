@@ -29,8 +29,8 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
       {/* Brand Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-[#263442] bg-[#0A0F14]">
         <Link href="/dashboard" className="flex items-center gap-3 overflow-hidden">
-          <div className="w-9 h-9 rounded-lg bg-[#37B9FF]/15 border border-[#37B9FF]/30 flex items-center justify-center flex-shrink-0">
-            <Shield className="w-5 h-5 text-[#37B9FF]" />
+          <div className="w-9 h-9 rounded-lg bg-[#37B9FF]/15 border border-[#37B9FF]/30 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
           {!collapsed && (
             <div className="truncate">
