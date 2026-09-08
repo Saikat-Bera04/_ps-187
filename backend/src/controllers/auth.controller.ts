@@ -75,4 +75,12 @@ export class AuthController {
       res.json({ success: true, data: user });
     } catch (error) { next(error); }
   }
+
+  static async faceVerify(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { descriptor } = req.body;
+      const result = await AuthService.verifyFace(req.user!.id, descriptor);
+      res.json({ success: true, data: result });
+    } catch (error) { next(error); }
+  }
 }

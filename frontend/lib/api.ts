@@ -102,6 +102,23 @@ export async function login(email: string, password: string) {
   return data.data;
 }
 
+export async function verifyFace(descriptor: number[], token?: string) {
+  const authToken = token || getToken();
+  const res = await fetch(`${API_BASE}/auth/face-verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    },
+    body: JSON.stringify({ descriptor }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error?.message || 'Face verification failed');
+  }
+  return data.data as { status: 'enrolled' | 'verified'; message: string; distance?: number };
+}
+
 export async function getCurrentUser(): Promise<User> {
   const raw = await fetchApi<Record<string, unknown>>('/auth/me');
   return mapBackendUser(raw);

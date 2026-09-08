@@ -126,6 +126,10 @@ model User {
   lastLoginAt         DateTime?
   lastLoginIp         String?
 
+  // Face verification (128-d descriptor from face-api.js)
+  faceDescriptor      Float[]
+  faceEnrolledAt      DateTime?
+
   // BOP assignment for resource-level authorization
   assignedBopId       String?
   assignedBop         Bop?      @relation(fields: [assignedBopId], references: [id])

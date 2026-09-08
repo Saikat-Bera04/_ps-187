@@ -252,4 +252,55 @@ export class AuthService {
 
     return user;
   }
+
+  /**
+   * Verify or enroll a user's face using a 128-d descriptor from face-api.js.
+   * - If no faceDescriptor is stored → enroll (save descriptor)
+   * - If a faceDescriptor exists → compare via Euclidean distance
+   */
+  static async verifyFace(userId: string, descriptor: number[]) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, faceDescriptor: true, faceEnrolledAt: true },
+    });
+
+    if (!user) {
+      throw AppError.notFound('User not found');
+    }
+
+    // --- ENROLLMENT (first time) ---
+    if (!user.faceDescriptor || user.faceDescriptor.length === 0) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          faceDescriptor: descriptor,
+          faceEnrolledAt: new Date(),
+        },
+      });
+      return { status: 'enrolled' as const, message: 'Face enrolled successfully. This face will be used for future logins.' };
+    }
+
+    // --- VERIFICATION (subsequent logins) ---
+    const stored = user.faceDescriptor;
+    const distance = AuthService.euclideanDistance(stored, descriptor);
+    const threshold = 0.6; // face-api.js recommended threshold
+
+    if (distance < threshold) {
+      return { status: 'verified' as const, message: 'Face verified successfully.', distance };
+    }
+
+    throw AppError.unauthorized(`Face verification failed. Distance: ${distance.toFixed(3)} exceeds threshold ${threshold}.`);
+  }
+
+  /**
+   * Calculate Euclidean distance between two face descriptors.
+   */
+  private static euclideanDistance(a: number[], b: number[]): number {
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) {
+      const diff = a[i] - b[i];
+      sum += diff * diff;
+    }
+    return Math.sqrt(sum);
+  }
 }
