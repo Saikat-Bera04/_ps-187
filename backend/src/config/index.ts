@@ -44,9 +44,14 @@ export const config = {
   // Blockchain
   blockchainMode: (process.env.BLOCKCHAIN_MODE || 'mock') as 'mock' | 'fabric',
   fabric: {
-    gatewayUrl: process.env.FABRIC_GATEWAY_URL || '',
     channel: process.env.FABRIC_CHANNEL || 'evidence-channel',
     chaincode: process.env.FABRIC_CHAINCODE || 'ibvap-evidence-cc',
+    mspId: process.env.FABRIC_MSP_ID || 'Org1MSP',
+    peerEndpoint: process.env.FABRIC_PEER_ENDPOINT || 'localhost:7051',
+    peerHostAlias: process.env.FABRIC_PEER_HOST_ALIAS || 'peer0.org1.example.com',
+    tlsCertPath: process.env.FABRIC_TLS_CERT_PATH || '',
+    certPath: process.env.FABRIC_CERT_PATH || '',
+    keyPath: process.env.FABRIC_KEY_PATH || '',
   },
 
   // CORS
