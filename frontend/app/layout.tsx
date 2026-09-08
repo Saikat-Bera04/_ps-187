@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-[#0A0F14] text-[#F3F6F8] antialiased overflow-hidden">
+      <body className="bg-[#0A0F14] text-[#F3F6F8] antialiased">
         <CommandCenterShell>{children}</CommandCenterShell>
       </body>
     </html>
