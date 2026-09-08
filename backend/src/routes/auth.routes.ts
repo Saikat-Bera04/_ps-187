@@ -9,6 +9,7 @@ import {
   verifyEmailSchema,
   resendVerificationSchema,
   refreshSchema,
+  faceVerifySchema,
 } from '../validators/auth.validators';
 
 const router = Router();
@@ -21,5 +22,6 @@ router.post('/refresh', validate(refreshSchema), AuthController.refresh);
 
 router.post('/logout', authenticate(), AuthController.logout);
 router.get('/me', authenticate(), AuthController.me);
+router.post('/face-verify', authenticate(), validate(faceVerifySchema), AuthController.faceVerify);
 
 export default router;

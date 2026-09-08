@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [rememberSession, setRememberSession] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string>('');
 
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +34,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await apiLogin(username, password);
+      const result = await apiLogin(username, password);
+      setAccessToken(result.accessToken);
       setIsLoading(false);
       setStep('FACE_VERIFICATION');
     } catch (err: any) {
@@ -42,17 +44,20 @@ export default function LoginPage() {
     }
   };
 
-  const handleFaceVerificationComplete = (success: boolean) => {
+  const handleFaceVerificationComplete = (success: boolean, result?: { status: 'enrolled' | 'verified'; message: string }) => {
     if (success) {
+      const isEnrollment = result?.status === 'enrolled';
       showToast({
-        title: 'Authentication Successful',
-        message: 'Welcome to IBVAP Command & Control Center.',
+        title: isEnrollment ? 'Face Enrolled & Authenticated' : 'Authentication Successful',
+        message: isEnrollment
+          ? 'Your face has been registered for future logins. Welcome!'
+          : 'Welcome to IBVAP Command & Control Center.',
         type: 'success',
       });
       router.push('/dashboard');
     } else {
       setError('Face verification failed. Please try again.');
-      setStep('CREDENTIALS'); // Reset on failure
+      setStep('CREDENTIALS');
     }
   };
 
@@ -184,7 +189,7 @@ export default function LoginPage() {
               <div className="text-xs text-[#A7B2BD] font-mono">Step 2 of 2</div>
             </div>
 
-            <FaceScanner onVerificationComplete={handleFaceVerificationComplete} />
+            <FaceScanner onVerificationComplete={handleFaceVerificationComplete} accessToken={accessToken} />
             
             <button
               onClick={() => setStep('CREDENTIALS')}
