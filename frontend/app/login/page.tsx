@@ -13,14 +13,14 @@ export default function LoginPage() {
   const { showToast } = useToast();
   
   const [step, setStep] = useState<LoginStep>('CREDENTIALS');
-  const [username, setUsername] = useState('saikat.bera@ibvap.gov.in');
-  const [password, setPassword] = useState('GovSecure#2026');
+  const [username, setUsername] = useState('operator12@ibvap.gov');
+  const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberSession, setRememberSession] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleCredentialsSubmit = (e: React.FormEvent) => {
+  const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -31,12 +31,29 @@ export default function LoginPage() {
 
     setIsLoading(true);
 
-    // Simulate credential verification delay
-    setTimeout(() => {
+    try {
+      const res = await fetch('http://localhost:4000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: username, password }),
+      });
+      const data = await res.json();
+      
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || 'Authentication failed');
+      }
+
+      // Store token
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ibvap_token', data.data.accessToken);
+      }
+
       setIsLoading(false);
-      // Move to next step
       setStep('FACE_VERIFICATION');
-    }, 800);
+    } catch (err: any) {
+      setIsLoading(false);
+      setError(err.message || 'Connection to server failed.');
+    }
   };
 
   const handleFaceVerificationComplete = (success: boolean) => {
