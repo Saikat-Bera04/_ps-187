@@ -1,6 +1,7 @@
 import { prisma } from '../config/database';
 import { AppError } from '../utils/app-error';
 import { calculateSHA256 } from '../utils/hash';
+import { StorageClient } from '../integrations/storage/minio-client';
 
 export class EvidenceService {
   static async getAll(filters?: { bopId?: string; status?: string; page?: number; limit?: number }) {
@@ -94,7 +95,14 @@ export class EvidenceService {
     if (!evidence) throw AppError.notFound('Evidence not found');
 
     const latestRecord = evidence.blockchainRecords[0];
-    const currentHash = evidence.hash; // In real scenario: recalculate from stored file
+    let currentHash = evidence.hash;
+    if (evidence.filePath) {
+      try {
+        currentHash = calculateSHA256(await StorageClient.read(evidence.filePath));
+      } catch {
+        throw AppError.serviceUnavailable('Evidence file could not be read for verification');
+      }
+    }
 
     const verified = latestRecord ? currentHash === latestRecord.evidenceHash : false;
 

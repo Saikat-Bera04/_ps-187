@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { VideoPlayer } from '@/components/cameras/VideoPlayer';
 import { VirtualFenceEditor } from '@/components/cameras/VirtualFenceEditor';
-import { getCamera } from '@/lib/api';
+import { getCamera, replaceCameraZones } from '@/lib/api';
 import { formatTimestamp } from '@/lib/utils';
 import type { Camera } from '@/types/camera';
 
@@ -46,6 +46,17 @@ export default function CameraDetailPage({ params }: { params: { id: string } })
     );
   }
 
+  const initialFence = camera.zones?.[0]?.coordinates.map(([x, y]) => ({ x, y }));
+
+  const saveFence = async (points: Array<{ x: number; y: number }>) => {
+    const result = await replaceCameraZones(camera.id, [{
+      name: `${camera.location} Restricted Zone`,
+      zoneType: 'RESTRICTED',
+      coordinates: points.map((point): [number, number] => [point.x, point.y]),
+    }]);
+    setCamera((current) => current ? { ...current, zones: result.zones } : current);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with Breadcrumb */}
@@ -76,7 +87,6 @@ export default function CameraDetailPage({ params }: { params: { id: string } })
           <VideoPlayer
             camera={camera}
             isLive={camera.status === 'ONLINE'}
-            hasIntrusion={camera.id === 'BOP12-CAM04'}
             className="w-full shadow-2xl"
           />
 
@@ -184,7 +194,7 @@ export default function CameraDetailPage({ params }: { params: { id: string } })
       </div>
 
       {/* ─── SECTION: VIRTUAL FENCE EDITOR (Section 26) ─── */}
-      <VirtualFenceEditor cameraId={camera.id} />
+      <VirtualFenceEditor cameraId={camera.id} initialPoints={initialFence} onSave={saveFence} />
     </div>
   );
 }

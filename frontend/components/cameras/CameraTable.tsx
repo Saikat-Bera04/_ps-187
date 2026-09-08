@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Eye, Play, Square, Trash2, Edit } from 'lucide-react';
+import { Eye, Play, Square, Trash2, LoaderCircle } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatTime } from '@/lib/utils';
@@ -10,8 +10,8 @@ import type { Camera } from '@/types/camera';
 
 interface CameraTableProps {
   cameras: Camera[];
-  onToggleStatus?: (id: string) => void;
-  onDelete?: (id: string) => void;
+  onToggleStatus?: (id: string) => Promise<unknown>;
+  onDelete?: (id: string) => Promise<unknown>;
   className?: string;
 }
 
@@ -22,6 +22,17 @@ export function CameraTable({
   className = '',
 }: CameraTableProps) {
   const [cameraToDelete, setCameraToDelete] = useState<Camera | null>(null);
+  const [pendingCameraId, setPendingCameraId] = useState<string | null>(null);
+
+  const toggleCamera = async (id: string) => {
+    if (!onToggleStatus) return;
+    setPendingCameraId(id);
+    try {
+      await onToggleStatus(id);
+    } finally {
+      setPendingCameraId(null);
+    }
+  };
 
   return (
     <>
@@ -72,7 +83,8 @@ export function CameraTable({
                       </Link>
                       {onToggleStatus && (
                         <button
-                          onClick={() => onToggleStatus(cam.id)}
+                          onClick={() => toggleCamera(cam.id)}
+                          disabled={pendingCameraId === cam.id}
                           className={`p-1.5 rounded-[6px] hover:bg-[#18222C] transition-colors ${
                             cam.status === 'ONLINE'
                               ? 'text-[#F4C95D] hover:text-[#F4C95D]'
@@ -80,7 +92,9 @@ export function CameraTable({
                           }`}
                           title={cam.status === 'ONLINE' ? 'Stop Stream' : 'Start Stream'}
                         >
-                          {cam.status === 'ONLINE' ? (
+                          {pendingCameraId === cam.id ? (
+                            <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                          ) : cam.status === 'ONLINE' ? (
                             <Square className="w-3.5 h-3.5" />
                           ) : (
                             <Play className="w-3.5 h-3.5" />
@@ -110,7 +124,7 @@ export function CameraTable({
         onClose={() => setCameraToDelete(null)}
         onConfirm={() => {
           if (cameraToDelete && onDelete) {
-            onDelete(cameraToDelete.id);
+                            onDelete(cameraToDelete.id);
             setCameraToDelete(null);
           }
         }}

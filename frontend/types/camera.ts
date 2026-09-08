@@ -10,7 +10,15 @@ export interface Camera {
   lastSeen: string;
   latitude: number;
   longitude: number;
-  streamUrl?: string;
+  previewUrl?: string;
+  zones?: CameraZone[];
+}
+
+export interface CameraZone {
+  id?: string;
+  name: string;
+  zoneType: string;
+  coordinates: [number, number][];
 }
 
 export interface BOP {

@@ -3,35 +3,36 @@
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import type { Camera } from '@/types/camera';
+import type { CameraRegistration } from '@/lib/api';
 
 interface AddCameraModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (cam: Omit<Camera, 'id' | 'lastSeen'>) => Promise<any>;
+  onAdd: (cam: CameraRegistration) => Promise<any>;
 }
 
 export function AddCameraModal({ isOpen, onClose, onAdd }: AddCameraModalProps) {
   const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
+    cameraCode: '',
     name: '',
     bopId: 'BOP-12',
     location: '',
-    status: 'ONLINE' as const,
-    fps: 30,
     resolution: '1920x1080',
-    aiStatus: 'ACTIVE' as const,
     latitude: 26.912,
     longitude: 75.787,
+    streamUrl: '',
+    rtspUsername: '',
+    rtspPassword: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.location) {
+    if (!formData.cameraCode || !formData.name || !formData.location || !formData.streamUrl) {
       showToast({
         title: 'Validation Error',
-        message: 'Name and Location are required fields.',
+        message: 'Camera ID, name, location, and stream URL are required.',
         type: 'warning',
       });
       return;
@@ -92,7 +93,18 @@ export function AddCameraModal({ isOpen, onClose, onAdd }: AddCameraModalProps) 
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-[#A7B2BD] block mb-1">Camera ID</label>
+            <input
+              type="text"
+              required
+              value={formData.cameraCode}
+              onChange={(e) => setFormData({ ...formData, cameraCode: e.target.value.toUpperCase() })}
+              placeholder="e.g. BOP12-CAM09"
+              className="w-full bg-[#0F151C] border border-[#2B3947] rounded-[7px] px-3 h-10 text-xs text-[#F3F6F8] focus:border-[#37B9FF] focus:outline-none font-mono"
+            />
+          </div>
           <div>
             <label className="text-xs font-semibold text-[#A7B2BD] block mb-1">Camera Name</label>
             <input
@@ -132,7 +144,7 @@ export function AddCameraModal({ isOpen, onClose, onAdd }: AddCameraModalProps) 
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-semibold text-[#A7B2BD] block mb-1">Resolution</label>
             <select
@@ -146,15 +158,39 @@ export function AddCameraModal({ isOpen, onClose, onAdd }: AddCameraModalProps) 
               <option value="1280x720">720p HD (1280x720)</option>
             </select>
           </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-[#A7B2BD] block mb-1">RTSP or NVR Stream URL</label>
+          <input
+            type="text"
+            required
+            value={formData.streamUrl}
+            onChange={(e) => setFormData({ ...formData, streamUrl: e.target.value })}
+            placeholder="rtsp://camera-host:554/stream"
+            className="w-full bg-[#0F151C] border border-[#2B3947] rounded-[7px] px-3 h-10 text-xs text-[#F3F6F8] focus:border-[#37B9FF] focus:outline-none font-mono"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-semibold text-[#A7B2BD] block mb-1">Target FPS</label>
+            <label className="text-xs font-semibold text-[#A7B2BD] block mb-1">Camera Username</label>
             <input
-              type="number"
-              min={10}
-              max={60}
-              value={formData.fps}
-              onChange={(e) => setFormData({ ...formData, fps: Number(e.target.value) })}
-              className="w-full bg-[#0F151C] border border-[#2B3947] rounded-[7px] px-3 h-10 text-xs text-[#F3F6F8] focus:border-[#37B9FF] focus:outline-none font-mono"
+              type="text"
+              autoComplete="off"
+              value={formData.rtspUsername}
+              onChange={(e) => setFormData({ ...formData, rtspUsername: e.target.value })}
+              className="w-full bg-[#0F151C] border border-[#2B3947] rounded-[7px] px-3 h-10 text-xs text-[#F3F6F8] focus:border-[#37B9FF] focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-[#A7B2BD] block mb-1">Camera Password</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={formData.rtspPassword}
+              onChange={(e) => setFormData({ ...formData, rtspPassword: e.target.value })}
+              className="w-full bg-[#0F151C] border border-[#2B3947] rounded-[7px] px-3 h-10 text-xs text-[#F3F6F8] focus:border-[#37B9FF] focus:outline-none"
             />
           </div>
         </div>

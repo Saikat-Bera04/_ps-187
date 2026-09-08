@@ -149,7 +149,7 @@ export default function LiveSurveillancePage() {
           const camAlert = alerts.find(
             (a) => a.cameraId === cam.id && a.severity === 'CRITICAL' && a.status !== 'RESOLVED'
           );
-          const hasIntrusion = !!camAlert || cam.id === 'BOP12-CAM04';
+          const hasIntrusion = !!camAlert;
 
           return (
             <div key={cam.id} className="relative group">

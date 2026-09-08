@@ -56,8 +56,8 @@ export function authorize() {
  * Require BOP-level access: ensures user is assigned to the requested BOP
  * or has SUPER_ADMIN/COMMANDER role.
  */
-export function requireBopAccess(getBopId: (req: Request) => string | undefined) {
-  return (req: Request, _res: Response, next: NextFunction) => {
+export function requireBopAccess(getBopId: (req: Request) => string | null | undefined | Promise<string | null | undefined>) {
+  return async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(AppError.unauthorized('Authentication required'));
     }
@@ -69,7 +69,7 @@ export function requireBopAccess(getBopId: (req: Request) => string | undefined)
       return next();
     }
 
-    const requestedBopId = getBopId(req);
+    const requestedBopId = await getBopId(req);
     if (!requestedBopId) {
       return next(); // No BOP context needed
     }

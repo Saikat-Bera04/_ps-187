@@ -14,31 +14,37 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:4000")
 AI_API_KEY = os.getenv("AI_API_KEY", "ibvap-ai-dev-key-change-in-production")
 
 
-def _normalize_event(raw: dict[str, Any], camera_id: str, bop_id: str | None, timestamp: str) -> dict[str, Any]:
+def _normalize_event(
+	event: dict[str, Any], camera_id: str, bop_id: str | None, timestamp: str,
+	evidence_snapshot: str | None = None,
+) -> dict[str, Any]:
 	"""Map ML event format to the IBVAP backend contract."""
-	bbox = raw.get("bounding_box") or raw.get("bbox")
+	bbox = event.get("bounding_box") or event.get("bbox")
 	zone = (
-		raw.get("zone")
-		or raw.get("zone_id")
-		or (raw.get("metadata") or {}).get("zone")
+		event.get("zone")
+		or event.get("zone_id")
+		or (event.get("metadata") or {}).get("zone")
 		or "UNKNOWN"
 	)
 	payload: dict[str, Any] = {
 		"cameraId": camera_id,
 		"timestamp": timestamp,
-		"eventType": str(raw.get("event_type", "PERSON_DETECTED")).upper(),
-		"objectType": str(raw.get("object_type", "PERSON")).upper(),
-		"confidence": float(raw.get("confidence") or 0.5),
+		"eventType": str(event.get("event_type", "PERSON_DETECTED")).upper(),
+		"objectType": str(event.get("object_type", "PERSON")).upper(),
+		"confidence": float(event.get("confidence") or 0.5),
 		"zone": str(zone),
 	}
 	if bop_id:
 		payload["bopId"] = bop_id
-	if raw.get("track_id") is not None:
-		payload["trackId"] = int(raw["track_id"])
+	if event.get("track_id") is not None:
+		payload["trackId"] = int(event["track_id"])
 	if bbox and len(bbox) == 4:
 		payload["bbox"] = [float(v) for v in bbox]
-	if raw.get("metadata"):
-		payload["metadata"] = raw["metadata"]
+	if event.get("metadata"):
+		payload["metadata"] = event["metadata"]
+	potentially_critical = payload["eventType"] in {"INTRUSION", "FACE_MATCH", "ANPR_MATCH"} or event.get("severity") == "CRITICAL"
+	if evidence_snapshot and potentially_critical:
+		payload["evidence"] = {"contentBase64": evidence_snapshot, "mimeType": "image/jpeg"}
 	return payload
 
 
@@ -47,6 +53,7 @@ def forward_events(
 	camera_id: str,
 	bop_id: str | None = None,
 	timestamp: str | None = None,
+	evidence_snapshot: str | None = None,
 ) -> list[dict[str, Any]]:
 	"""POST each detection event to POST /api/ai/events."""
 	if not events:
@@ -58,7 +65,7 @@ def forward_events(
 
 	with httpx.Client(timeout=10.0) as client:
 		for raw in events:
-			payload = _normalize_event(raw, camera_id, bop_id, ts or raw.get("timestamp", ""))
+			payload = _normalize_event(raw, camera_id, bop_id, ts or raw.get("timestamp", ""), evidence_snapshot)
 			try:
 				response = client.post(f"{BACKEND_URL.rstrip('/')}/api/ai/events", json=payload, headers=headers)
 				response.raise_for_status()
@@ -69,3 +76,21 @@ def forward_events(
 				logger.error("Failed to forward event to backend: %s", exc)
 				results.append({"error": str(exc), "payload": payload})
 	return results
+
+
+def report_camera_status(camera_id: str, status: str, ai_status: str, fps: float, message: str) -> None:
+	"""Report an RTSP worker heartbeat to the Node.js backend."""
+	payload = {
+		"cameraId": camera_id,
+		"status": status,
+		"aiStatus": ai_status,
+		"fps": max(0, round(fps)),
+		"message": message,
+	}
+	headers = {"Content-Type": "application/json", "X-AI-API-Key": AI_API_KEY}
+	with httpx.Client(timeout=10.0) as client:
+		try:
+			response = client.post(f"{BACKEND_URL.rstrip('/')}/api/ai/cameras/status", json=payload, headers=headers)
+			response.raise_for_status()
+		except httpx.HTTPError as exc:
+			logger.warning("Failed to report status for %s: %s", camera_id, exc)

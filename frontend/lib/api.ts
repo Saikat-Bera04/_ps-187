@@ -1,4 +1,4 @@
-import type { Camera, BOP } from '@/types/camera';
+import type { Camera, BOP, CameraZone } from '@/types/camera';
 import type { IBVAPEvent, TimelineEntry } from '@/types/event';
 import type { Alert, AlertStatus } from '@/types/alert';
 import type { Evidence } from '@/types/evidence';
@@ -158,17 +158,42 @@ export async function getCamera(id: string): Promise<Camera | undefined> {
   }
 }
 
-export async function addCamera(newCam: Omit<Camera, 'id' | 'lastSeen'> & { id?: string; lastSeen?: string }): Promise<Camera> {
+export interface CameraRegistration {
+  cameraCode: string;
+  name: string;
+  bopId: string;
+  location: string;
+  latitude: number;
+  longitude: number;
+  resolution: string;
+  streamUrl: string;
+  rtspUsername?: string;
+  rtspPassword?: string;
+}
+
+export interface CameraControlResult {
+  id: string;
+  status: Camera['status'];
+  aiStatus: Camera['aiStatus'];
+  fps: number;
+  lastSeen: string | null;
+  message: string;
+}
+
+export async function addCamera(newCam: CameraRegistration): Promise<Camera> {
   return fetchApi<Camera>('/cameras', {
     method: 'POST',
     body: JSON.stringify({
-      cameraCode: newCam.id,
+      cameraCode: newCam.cameraCode,
       name: newCam.name,
       location: newCam.location,
       bopCode: newCam.bopId,
       latitude: newCam.latitude,
       longitude: newCam.longitude,
       resolution: newCam.resolution,
+      streamUrl: newCam.streamUrl,
+      rtspUsername: newCam.rtspUsername || undefined,
+      rtspPassword: newCam.rtspPassword || undefined,
     }),
   });
 }
@@ -178,13 +203,24 @@ export async function deleteCamera(id: string): Promise<boolean> {
   return true;
 }
 
-export async function toggleCameraStatus(id: string): Promise<Camera | undefined> {
+export async function startCamera(id: string): Promise<CameraControlResult> {
+  return fetchApi<CameraControlResult>(`/cameras/${id}/start`, { method: 'POST' });
+}
+
+export async function stopCamera(id: string): Promise<CameraControlResult> {
+  return fetchApi<CameraControlResult>(`/cameras/${id}/stop`, { method: 'POST' });
+}
+
+export async function toggleCameraStatus(id: string): Promise<CameraControlResult | undefined> {
   const cam = await getCamera(id);
   if (!cam) return undefined;
-  const newStatus = cam.status === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
-  return fetchApi<Camera>(`/cameras/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status: newStatus, aiStatus: newStatus === 'ONLINE' ? 'ACTIVE' : 'INACTIVE' }),
+  return cam.status === 'ONLINE' ? stopCamera(id) : startCamera(id);
+}
+
+export async function replaceCameraZones(id: string, zones: Omit<CameraZone, 'id'>[]) {
+  return fetchApi<{ cameraId: string; zones: CameraZone[] }>(`/cameras/${id}/zones`, {
+    method: 'PUT',
+    body: JSON.stringify({ zones }),
   });
 }
 

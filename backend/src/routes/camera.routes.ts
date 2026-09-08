@@ -4,7 +4,7 @@ import { authenticate } from '../middleware/auth.middleware';
 import { requirePermission, requireBopAccess } from '../middleware/rbac.middleware';
 import { cameraControlLimiter } from '../middleware/rate-limiter';
 import { validate } from '../middleware/validate';
-import { createCameraSchema, updateCameraSchema } from '../validators/camera.validators';
+import { createCameraSchema, replaceCameraZonesSchema, updateCameraSchema } from '../validators/camera.validators';
 import { CameraService } from '../services/camera.service';
 
 const router = Router();
@@ -16,7 +16,7 @@ router.get('/', requirePermission('camera:read'), CameraController.getAll);
 
 // Dynamic BOP authorization for single camera routes
 const cameraBopAuth = requireBopAccess(async (req) => {
-  return await CameraService.getCameraBopId(req.params.id);
+  return await CameraService.getCameraBopId(String(req.params.id));
 });
 
 router.get('/:id', requirePermission('camera:read'), cameraBopAuth, CameraController.getById);
@@ -33,6 +33,7 @@ router.post(
 // Update/Delete camera
 router.patch('/:id', requirePermission('camera:update'), cameraBopAuth, validate(updateCameraSchema), CameraController.update);
 router.delete('/:id', requirePermission('camera:delete'), cameraBopAuth, CameraController.delete);
+router.put('/:id/zones', requirePermission('camera:update'), cameraBopAuth, validate(replaceCameraZonesSchema), CameraController.replaceZones);
 
 // Camera controls
 router.post('/:id/test', requirePermission('camera:control'), cameraBopAuth, cameraControlLimiter, CameraController.test);
