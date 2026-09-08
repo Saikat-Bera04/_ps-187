@@ -1,5 +1,7 @@
 """FastAPI entry point for frame analysis."""
 
+import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 import tempfile
@@ -9,8 +11,10 @@ import cv2
 import numpy as np
 import yaml
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from pydantic import BaseModel, Field
 
 try:
+	from ml.api.backend_client import forward_events
 	from ml.src.activity import ActivityMonitor
 	from ml.src.anpr import ANPRPipeline
 	from ml.src.detector import YOLODetector, select_device
@@ -20,6 +24,7 @@ try:
 	from ml.src.pipeline import VideoPipeline
 	from ml.src.tracker import ObjectTracker
 except ModuleNotFoundError:
+	from api.backend_client import forward_events
 	from src.activity import ActivityMonitor
 	from src.anpr import ANPRPipeline
 	from src.detector import YOLODetector, select_device
@@ -54,6 +59,22 @@ pipeline = VideoPipeline(detector, tracker, fence, activity, face_detector,
 						 CONFIG.get("camera_id", "CAM_001"), CONFIG.get("process_every_n_frames", 1),
 						 ANPRPipeline() if CONFIG.get("enabled_modules", {}).get("anpr", False) else None)
 app = FastAPI(title="IBVAP ML API", version="1.0.0")
+logger = logging.getLogger(__name__)
+
+DEFAULT_CAMERA_ID = CONFIG.get("camera_id", "BOP12-CAM04")
+DEFAULT_BOP_ID = CONFIG.get("bop_id", "BOP-12")
+FORWARD_TO_BACKEND = os.getenv("FORWARD_TO_BACKEND", "true").lower() in {"1", "true", "yes"}
+
+
+class SimulateIntrusionRequest(BaseModel):
+	camera_id: str = Field(default=DEFAULT_CAMERA_ID)
+	bop_id: str = Field(default=DEFAULT_BOP_ID)
+	event_type: str = Field(default="INTRUSION")
+	object_type: str = Field(default="PERSON")
+	confidence: float = Field(default=0.96, ge=0, le=1)
+	track_id: int = Field(default=72)
+	zone: str = Field(default="NORTH_FENCE")
+	bbox: list[float] = Field(default=[421, 183, 523, 462])
 
 
 @app.get("/")
@@ -78,7 +99,7 @@ async def _decode_image(file: UploadFile) -> np.ndarray:
 	return image
 
 
-async def _analyze_image(file: UploadFile, camera_id: str) -> dict[str, Any]:
+async def _analyze_image(file: UploadFile, camera_id: str, bop_id: str | None = None) -> dict[str, Any]:
 	image = await _decode_image(file)
 	try:
 		result = pipeline.process_frame(image, timestamp=datetime.now(timezone.utc).isoformat())
@@ -90,17 +111,33 @@ async def _analyze_image(file: UploadFile, camera_id: str) -> dict[str, Any]:
 	event_manager.events.extend(result["events"])
 	result["anpr_status"] = "disabled" if not CONFIG.get("enabled_modules", {}).get("anpr", False) else "unavailable"
 	result["face_status"] = "available" if face_detector is not None else "disabled"
+
+	if FORWARD_TO_BACKEND and result["events"]:
+		result["backend"] = forward_events(
+			result["events"],
+			camera_id=camera_id,
+			bop_id=bop_id or DEFAULT_BOP_ID,
+			timestamp=result["timestamp"],
+		)
 	return result
 
 
 @app.post("/analyze/frame")
-async def analyze_frame(file: UploadFile = File(...), camera_id: str = "CAM_001") -> dict[str, Any]:
-	return await _analyze_image(file, camera_id)
+async def analyze_frame(
+	file: UploadFile = File(...),
+	camera_id: str = DEFAULT_CAMERA_ID,
+	bop_id: str | None = None,
+) -> dict[str, Any]:
+	return await _analyze_image(file, camera_id, bop_id)
 
 
 @app.post("/analyze/image")
-async def analyze_image(file: UploadFile = File(...), camera_id: str = "CAM_001") -> dict[str, Any]:
-	return await _analyze_image(file, camera_id)
+async def analyze_image(
+	file: UploadFile = File(...),
+	camera_id: str = DEFAULT_CAMERA_ID,
+	bop_id: str | None = None,
+) -> dict[str, Any]:
+	return await _analyze_image(file, camera_id, bop_id)
 
 
 @app.post("/analyze/video")
@@ -123,3 +160,25 @@ async def analyze_video(file: UploadFile = File(...), camera_id: str = "CAM_001"
 @app.get("/events")
 def events() -> dict[str, Any]:
 	return {"camera_id": event_manager.camera_id, "events": event_manager.events}
+
+
+@app.post("/simulate/intrusion")
+def simulate_intrusion(body: SimulateIntrusionRequest) -> dict[str, Any]:
+	"""Demo endpoint: inject a synthetic INTRUSION into the Node.js backend."""
+	timestamp = datetime.now(timezone.utc).isoformat()
+	raw_event = {
+		"event_type": body.event_type,
+		"object_type": body.object_type,
+		"track_id": body.track_id,
+		"confidence": body.confidence,
+		"bbox": body.bbox,
+		"metadata": {"zone": body.zone},
+		"timestamp": timestamp,
+	}
+	backend = forward_events(
+		[raw_event],
+		camera_id=body.camera_id,
+		bop_id=body.bop_id,
+		timestamp=timestamp,
+	)
+	return {"simulated": raw_event, "backend": backend}

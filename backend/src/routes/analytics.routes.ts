@@ -8,6 +8,7 @@ const router = Router();
 router.use(authenticate());
 router.use(requirePermission('analytics:read'));
 
+router.get('/overview', AnalyticsController.overview);
 router.get('/alerts', AnalyticsController.alerts);
 router.get('/events', AnalyticsController.events);
 router.get('/intrusions', AnalyticsController.intrusions);

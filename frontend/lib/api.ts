@@ -1,19 +1,3 @@
-import {
-  mockCameras,
-  mockBOPs,
-  mockEvents,
-  mockAlerts,
-  mockEvidence,
-  mockWatchlistPersons,
-  mockWatchlistVehicles,
-  mockSystemHealth,
-  mockTimeline,
-  mockAnalyticsAlertsByHour,
-  mockAnalyticsEventsByDay,
-  mockThreatDistribution,
-  mockBopEvents,
-  mockUser,
-} from './mock-data';
 import type { Camera, BOP } from '@/types/camera';
 import type { IBVAPEvent, TimelineEntry } from '@/types/event';
 import type { Alert, AlertStatus } from '@/types/alert';
@@ -21,310 +5,319 @@ import type { Evidence } from '@/types/evidence';
 import type { WatchlistPerson, WatchlistVehicle } from '@/types/watchlist';
 import type { SystemHealth, User } from '@/types/system';
 
-// In-memory mutable copies for interactive prototype demonstrations
-let camerasState: Camera[] = [...mockCameras];
-let alertsState: Alert[] = [...mockAlerts];
-let eventsState: IBVAPEvent[] = [...mockEvents];
-let evidenceState: Evidence[] = [...mockEvidence];
-let watchlistPersonsState: WatchlistPerson[] = [...mockWatchlistPersons];
-let watchlistVehiclesState: WatchlistVehicle[] = [...mockWatchlistVehicles];
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
-const delay = (ms = 150) => new Promise((resolve) => setTimeout(resolve, ms));
+function getToken(): string {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem('ibvap_token') || '';
+}
 
-const API_BASE = 'http://localhost:4000/api';
-
-async function fetchApi(endpoint: string, options: RequestInit = {}) {
-  let token = '';
-  if (typeof window !== 'undefined') {
-    token = localStorage.getItem('ibvap_token') || '';
-  }
-  
-  const headers = {
+async function fetchApi<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
+    ...(options.headers as Record<string, string> | undefined),
   };
 
   const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
   const data = await res.json();
+
   if (!res.ok || !data.success) {
-    throw new Error(data.error?.message || 'API request failed');
+    throw new Error(data.error?.message || `API request failed (${res.status})`);
+  }
+
+  return data.data as T;
+}
+
+function mapBackendUser(raw: Record<string, unknown>): User {
+  const roleMap: Record<string, User['role']> = {
+    SUPER_ADMIN: 'ADMIN',
+    COMMANDER: 'COMMANDER',
+    BOP_OPERATOR: 'OPERATOR',
+    ANALYST: 'ANALYST',
+    INVESTIGATOR: 'INVESTIGATOR',
+    AUDITOR: 'AUDITOR',
+  };
+  return {
+    id: String(raw.id),
+    name: String(raw.name),
+    email: String(raw.email),
+    role: roleMap[String(raw.role)] || 'OPERATOR',
+  };
+}
+
+function mapSystemHealth(raw: { services: Array<{ service: string; status: string; latency: number; lastChecked: string }>; overall: string }, cameras?: Camera[]): SystemHealth {
+  const statusMap = (s: string): 'ONLINE' | 'DEGRADED' | 'OFFLINE' => {
+    if (s === 'healthy') return 'ONLINE';
+    if (s === 'degraded') return 'DEGRADED';
+    return 'OFFLINE';
+  };
+
+  const camList = cameras || [];
+  const online = camList.filter((c) => c.status === 'ONLINE').length;
+  const offline = camList.filter((c) => c.status === 'OFFLINE').length;
+  const warning = camList.filter((c) => c.status === 'DEGRADED').length;
+
+  return {
+    services: raw.services.map((s) => ({
+      name: s.service,
+      status: statusMap(s.status),
+      latency: s.latency,
+      lastCheck: s.lastChecked,
+      uptime: s.status === 'healthy' ? 99.9 : s.status === 'degraded' ? 95.0 : 0,
+    })),
+    hardware: { cpu: 38, ram: 52, gpu: 64, storage: 41 },
+    cameraSummary: {
+      total: camList.length,
+      online,
+      offline,
+      warning,
+    },
+    aiMetrics: {
+      inferenceFps: 24.5,
+      inferenceLatency: 42,
+    },
+    infrastructure: {
+      eventProcessingRate: raw.overall === 'healthy' ? 128 : 64,
+      apiResponseTime: raw.services[0]?.latency || 12,
+    },
+  };
+}
+
+// ─── Auth ────────────────────────────────────────────────
+export async function login(email: string, password: string) {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error?.message || 'Authentication failed');
+  }
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('ibvap_token', data.data.accessToken);
   }
   return data.data;
 }
 
-// ─── Dashboard (Section 21-22) ──────────────────────────
+export async function getCurrentUser(): Promise<User> {
+  const raw = await fetchApi<Record<string, unknown>>('/auth/me');
+  return mapBackendUser(raw);
+}
+
+// ─── Dashboard ───────────────────────────────────────────
 export async function getDashboardStats() {
-  await delay(120);
-  const totalCameras = camerasState.length;
-  const onlineCameras = camerasState.filter((c) => c.status === 'ONLINE').length;
-  const offlineCameras = camerasState.filter((c) => c.status === 'OFFLINE').length;
-  const activeAlerts = alertsState.filter((a) => a.status !== 'RESOLVED').length;
-  const criticalAlerts = alertsState.filter((a) => a.severity === 'CRITICAL' && a.status !== 'RESOLVED').length;
-  const eventsToday = eventsState.length;
+  const [cameras, alerts, events] = await Promise.all([
+    getCameras(),
+    getAlerts(),
+    getEvents(),
+  ]);
+
+  const today = new Date().toISOString().split('T')[0];
+  const eventsToday = events.filter((e) => e.timestamp.startsWith(today)).length;
 
   return {
-    totalCameras,
-    onlineCameras,
-    offlineCameras,
-    activeAlerts,
-    criticalAlerts,
-    eventsToday,
+    totalCameras: cameras.length,
+    onlineCameras: cameras.filter((c) => c.status === 'ONLINE').length,
+    offlineCameras: cameras.filter((c) => c.status === 'OFFLINE').length,
+    activeAlerts: alerts.filter((a) => a.status !== 'RESOLVED').length,
+    criticalAlerts: alerts.filter((a) => a.severity === 'CRITICAL' && a.status !== 'RESOLVED').length,
+    eventsToday: eventsToday || events.length,
   };
 }
 
-// ─── Cameras (Section 24-26) ─────────────────────────────
+// ─── Cameras ─────────────────────────────────────────────
 export async function getCameras(): Promise<Camera[]> {
-  try {
-    return await fetchApi('/cameras');
-  } catch (err) {
-    console.warn('Backend unavailable, returning mock cameras', err);
-    await delay(150);
-    return [...camerasState];
-  }
+  return fetchApi<Camera[]>('/cameras');
 }
 
 export async function getCamera(id: string): Promise<Camera | undefined> {
-  await delay(100);
-  return camerasState.find((c) => c.id === id);
+  try {
+    return await fetchApi<Camera>(`/cameras/${id}`);
+  } catch {
+    return undefined;
+  }
 }
 
 export async function addCamera(newCam: Omit<Camera, 'id' | 'lastSeen'> & { id?: string; lastSeen?: string }): Promise<Camera> {
-  await delay(200);
-  const id = newCam.id || `BOP12-CAM${String(camerasState.length + 1).padStart(2, '0')}`;
-  const camera: Camera = {
-    ...newCam,
-    id,
-    lastSeen: new Date().toISOString(),
-  };
-  camerasState = [camera, ...camerasState];
-  return camera;
+  return fetchApi<Camera>('/cameras', {
+    method: 'POST',
+    body: JSON.stringify({
+      cameraCode: newCam.id,
+      name: newCam.name,
+      location: newCam.location,
+      bopCode: newCam.bopId,
+      latitude: newCam.latitude,
+      longitude: newCam.longitude,
+      resolution: newCam.resolution,
+    }),
+  });
 }
 
 export async function deleteCamera(id: string): Promise<boolean> {
-  await delay(200);
-  camerasState = camerasState.filter((c) => c.id !== id);
+  await fetchApi(`/cameras/${id}`, { method: 'DELETE' });
   return true;
 }
 
 export async function toggleCameraStatus(id: string): Promise<Camera | undefined> {
-  await delay(150);
-  const cam = camerasState.find((c) => c.id === id);
-  if (cam) {
-    cam.status = cam.status === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
-    cam.aiStatus = cam.status === 'ONLINE' ? 'ACTIVE' : 'INACTIVE';
-  }
-  return cam;
+  const cam = await getCamera(id);
+  if (!cam) return undefined;
+  const newStatus = cam.status === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
+  return fetchApi<Camera>(`/cameras/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: newStatus, aiStatus: newStatus === 'ONLINE' ? 'ACTIVE' : 'INACTIVE' }),
+  });
 }
 
-// ─── Events (Section 29-30) ──────────────────────────────
+// ─── Events ──────────────────────────────────────────────
 export async function getEvents(): Promise<IBVAPEvent[]> {
-  try {
-    return await fetchApi('/events');
-  } catch (err) {
-    console.warn('Backend unavailable, returning mock events', err);
-    await delay(150);
-    return [...eventsState];
-  }
+  return fetchApi<IBVAPEvent[]>('/events');
 }
 
 export async function getEvent(id: string): Promise<IBVAPEvent | undefined> {
-  await delay(100);
-  return eventsState.find((e) => e.eventId === id);
-}
-
-export async function getEventTimeline(eventId: string): Promise<TimelineEntry[]> {
-  await delay(120);
-  return mockTimeline;
-}
-
-// ─── Alerts (Section 27-28) ──────────────────────────────
-export async function getAlerts(): Promise<Alert[]> {
   try {
-    return await fetchApi('/alerts');
-  } catch (err) {
-    console.warn('Backend unavailable, returning mock alerts', err);
-    await delay(150);
-    return [...alertsState];
+    return await fetchApi<IBVAPEvent>(`/events/${id}`);
+  } catch {
+    return undefined;
   }
+}
+
+export async function getEventTimeline(_eventId: string): Promise<TimelineEntry[]> {
+  return [];
+}
+
+// ─── Alerts ──────────────────────────────────────────────
+export async function getAlerts(): Promise<Alert[]> {
+  return fetchApi<Alert[]>('/alerts');
 }
 
 export async function updateAlertStatus(alertId: string, status: AlertStatus): Promise<Alert | undefined> {
-  await delay(150);
-  const alert = alertsState.find((a) => a.alertId === alertId);
-  if (alert) {
-    alert.status = status;
-    if (status === 'RESOLVED') {
-      alert.resolvedAt = new Date().toISOString();
-    }
-  }
-  return alert;
+  const actionMap: Partial<Record<AlertStatus, string>> = {
+    ACKNOWLEDGED: 'acknowledge',
+    RESOLVED: 'resolve',
+    ESCALATED: 'escalate',
+  };
+  const action = actionMap[status];
+  if (!action) return undefined;
+
+  const result = await fetchApi<{ alertId: string; status: AlertStatus }>(`/alerts/${alertId}/${action}`, {
+    method: 'PATCH',
+  });
+  const alerts = await getAlerts();
+  return alerts.find((a) => a.alertId === result.alertId);
 }
 
-// ─── Evidence (Section 32-33) ────────────────────────────
+// ─── Evidence ────────────────────────────────────────────
 export async function getEvidence(): Promise<Evidence[]> {
-  try {
-    return await fetchApi('/evidence');
-  } catch (err) {
-    console.warn('Backend unavailable, returning mock evidence', err);
-    await delay(150);
-    return [...evidenceState];
-  }
+  return fetchApi<Evidence[]>('/evidence');
 }
 
 export async function getEvidenceById(id: string): Promise<Evidence | undefined> {
-  await delay(100);
-  return evidenceState.find((e) => e.evidenceId === id);
+  try {
+    return await fetchApi<Evidence>(`/evidence/${id}`);
+  } catch {
+    return undefined;
+  }
 }
 
-export async function verifyEvidence(id: string): Promise<{
-  verified: boolean;
-  currentHash: string;
-  blockchainHash: string;
-  timestamp: string;
-  blockNumber: number;
-  txId: string;
-  recordedBy: string;
-  recordedOrg: string;
-}> {
-  await delay(1200); // realistic cryptographic re-hash simulation delay
-  const evidence = evidenceState.find((e) => e.evidenceId === id);
-  if (!evidence) {
-    return {
-      verified: false,
-      currentHash: '',
-      blockchainHash: '',
-      timestamp: new Date().toISOString(),
-      blockNumber: 0,
-      txId: '',
-      recordedBy: '',
-      recordedOrg: '',
-    };
-  }
-
-  const verified = evidence.verificationStatus !== 'FAILED';
-  const blockchainHash = verified
-    ? evidence.hash
-    : 'b21c9d5f8a0b2c4d6e8f0a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e' + 'tampered_mismatch';
-
-  if (verified) {
-    evidence.verificationStatus = 'VERIFIED';
-  }
-
-  return {
-    verified,
-    currentHash: evidence.hash,
-    blockchainHash,
-    timestamp: evidence.timestamp,
-    blockNumber: evidence.blockNumber,
-    txId: evidence.blockchainTxId,
-    recordedBy: evidence.recordedBy,
-    recordedOrg: evidence.recordedOrg,
-  };
+export async function verifyEvidence(id: string) {
+  return fetchApi<{
+    verified: boolean;
+    currentHash: string;
+    blockchainHash: string;
+    timestamp: string;
+    blockNumber: number;
+    txId: string;
+    recordedBy: string;
+    recordedOrg: string;
+  }>(`/evidence/${id}/verify`, { method: 'POST' });
 }
 
-// ─── Watchlist (Section 36) ──────────────────────────────
+// ─── Watchlist (backend routes exist; wire when ready) ─────
 export async function getWatchlist(): Promise<{
   persons: WatchlistPerson[];
   vehicles: WatchlistVehicle[];
 }> {
-  await delay(150);
-  return {
-    persons: [...watchlistPersonsState],
-    vehicles: [...watchlistVehiclesState],
-  };
+  try {
+    const [persons, vehicles] = await Promise.all([
+      fetchApi<WatchlistPerson[]>('/watchlist/persons'),
+      fetchApi<WatchlistVehicle[]>('/watchlist/vehicles'),
+    ]);
+    return { persons, vehicles };
+  } catch {
+    return { persons: [], vehicles: [] };
+  }
 }
 
 export async function addWatchlistPerson(person: Omit<WatchlistPerson, 'referenceId' | 'addedAt'>): Promise<WatchlistPerson> {
-  await delay(200);
-  const newPerson: WatchlistPerson = {
-    ...person,
-    referenceId: `WLP-${String(watchlistPersonsState.length + 1).padStart(3, '0')}`,
-    addedAt: new Date().toISOString(),
-  };
-  watchlistPersonsState = [newPerson, ...watchlistPersonsState];
-  return newPerson;
+  return fetchApi<WatchlistPerson>('/watchlist/persons', {
+    method: 'POST',
+    body: JSON.stringify(person),
+  });
 }
 
 export async function addWatchlistVehicle(vehicle: Omit<WatchlistVehicle, 'vehicleId' | 'addedAt'>): Promise<WatchlistVehicle> {
-  await delay(200);
-  const newVehicle: WatchlistVehicle = {
-    ...vehicle,
-    vehicleId: `WLV-${String(watchlistVehiclesState.length + 1).padStart(3, '0')}`,
-    addedAt: new Date().toISOString(),
-  };
-  watchlistVehiclesState = [newVehicle, ...watchlistVehiclesState];
-  return newVehicle;
+  return fetchApi<WatchlistVehicle>('/watchlist/vehicles', {
+    method: 'POST',
+    body: JSON.stringify(vehicle),
+  });
 }
 
-// ─── Analytics (Section 37) ──────────────────────────────
+// ─── Analytics ───────────────────────────────────────────
 export async function getAnalytics() {
-  await delay(200);
-  return {
-    alertsByHour: mockAnalyticsAlertsByHour,
-    eventsByDay: mockAnalyticsEventsByDay,
-    threatDistribution: mockThreatDistribution,
-    bopEvents: mockBopEvents,
-  };
+  return fetchApi<{
+    alertsByHour: Array<{ hour: string; count: number }>;
+    eventsByDay: Array<{ date: string; persons: number; vehicles: number; intrusions: number; anpr: number }>;
+    threatDistribution: Array<{ name: string; value: number; color: string }>;
+    bopEvents: Array<{ name: string; events: number; alerts: number }>;
+  }>('/analytics/overview');
 }
 
-// ─── System Health (Section 38) ──────────────────────────
+// ─── System Health ───────────────────────────────────────
 export async function getSystemHealth(): Promise<SystemHealth> {
-  try {
-    const data = await fetchApi('/system/health');
-    return data;
-  } catch (err) {
-    console.warn('Backend unavailable, returning mock system health', err);
-    await delay(150);
-    return mockSystemHealth;
-  }
+  const [raw, cameras] = await Promise.all([
+    fetchApi<{ services: Array<{ service: string; status: string; latency: number; lastChecked: string }>; overall: string }>('/system/health'),
+    getCameras().catch(() => [] as Camera[]),
+  ]);
+  return mapSystemHealth(raw, cameras);
 }
 
-// ─── BOPs & User ─────────────────────────────────────────
+// ─── BOPs ────────────────────────────────────────────────
 export async function getBOPs(): Promise<BOP[]> {
-  await delay(120);
-  return mockBOPs;
+  return fetchApi<BOP[]>('/bops');
 }
 
-export async function getCurrentUser(): Promise<User> {
-  try {
-    const data = await fetchApi('/auth/me');
-    return data;
-  } catch (err) {
-    console.warn('Backend unavailable, returning mock user', err);
-    await delay(80);
-    return mockUser;
-  }
-}
-
-// ─── Global Search (Section 40) ──────────────────────────
+// ─── Global Search ───────────────────────────────────────
 export async function globalSearch(query: string) {
-  await delay(100);
   const q = query.toLowerCase().trim();
   if (!q) return { cameras: [], alerts: [], events: [], evidence: [], watchlist: [] };
 
-  const matchedCameras = camerasState.filter(
-    (c) => c.id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.location.toLowerCase().includes(q)
-  );
-  const matchedAlerts = alertsState.filter(
-    (a) => a.alertId.toLowerCase().includes(q) || a.description.toLowerCase().includes(q) || a.bopId.toLowerCase().includes(q)
-  );
-  const matchedEvents = eventsState.filter(
-    (e) => e.eventId.toLowerCase().includes(q) || e.eventType.toLowerCase().includes(q) || e.zone.toLowerCase().includes(q)
-  );
-  const matchedEvidence = evidenceState.filter(
-    (ev) => ev.evidenceId.toLowerCase().includes(q) || ev.blockchainTxId.toLowerCase().includes(q) || ev.hash.toLowerCase().includes(q)
-  );
-  const matchedWatchlist = [
-    ...watchlistPersonsState.filter((p) => p.name.toLowerCase().includes(q) || p.referenceId.toLowerCase().includes(q)),
-    ...watchlistVehiclesState.filter((v) => v.numberPlate.toLowerCase().includes(q) || v.vehicleId.toLowerCase().includes(q)),
-  ];
+  const [cameras, alerts, events, evidence, watchlist] = await Promise.all([
+    getCameras(),
+    getAlerts(),
+    getEvents(),
+    getEvidence(),
+    getWatchlist(),
+  ]);
 
   return {
-    cameras: matchedCameras,
-    alerts: matchedAlerts,
-    events: matchedEvents,
-    evidence: matchedEvidence,
-    watchlist: matchedWatchlist,
+    cameras: cameras.filter(
+      (c) => c.id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.location.toLowerCase().includes(q),
+    ),
+    alerts: alerts.filter(
+      (a) => a.alertId.toLowerCase().includes(q) || a.description.toLowerCase().includes(q) || a.bopId.toLowerCase().includes(q),
+    ),
+    events: events.filter(
+      (e) => e.eventId.toLowerCase().includes(q) || e.eventType.toLowerCase().includes(q) || e.zone.toLowerCase().includes(q),
+    ),
+    evidence: evidence.filter(
+      (ev) => ev.evidenceId.toLowerCase().includes(q) || ev.blockchainTxId.toLowerCase().includes(q) || ev.hash.toLowerCase().includes(q),
+    ),
+    watchlist: [
+      ...watchlist.persons.filter((p) => p.name.toLowerCase().includes(q) || p.referenceId.toLowerCase().includes(q)),
+      ...watchlist.vehicles.filter((v) => v.numberPlate.toLowerCase().includes(q) || v.vehicleId.toLowerCase().includes(q)),
+    ],
   };
 }

@@ -32,12 +32,12 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     wsClient.connect();
 
-    const handleNewAlert = (msg: any) => {
-      if (msg?.data?.alertId) {
+    const handleNewAlert = (data: Record<string, unknown>) => {
+      if (data?.alertId) {
         showToast({
-          title: `Active Alert: ${msg.data.alertId}`,
-          message: `${msg.data.eventType} detected (${msg.data.severity})`,
-          type: msg.data.severity === 'CRITICAL' ? 'error' : 'warning',
+          title: `Active Alert: ${data.alertId}`,
+          message: `${data.eventType} detected (${data.severity})`,
+          type: data.severity === 'CRITICAL' ? 'error' : 'warning',
         });
       }
     };
