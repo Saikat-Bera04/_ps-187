@@ -4,6 +4,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Shield, ArrowRight, Video, Lock, Radio, Activity } from 'lucide-react';
 import './landing.css';
+import { 
+  ProblemSection, 
+  SolutionSection, 
+  AiCapabilitiesSection, 
+  ResponseSection, 
+  EvidenceSection, 
+  BlockchainSection, 
+  CommandCenterSection, 
+  AdditionalSections, 
+  LandingFooter 
+} from './components/landing/LandingSections';
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -240,6 +251,17 @@ export default function LandingPage() {
           </div>
         </footer>
       </main>
+
+      {/* NEW MARKETING SECTIONS */}
+      <ProblemSection />
+      <SolutionSection />
+      <AiCapabilitiesSection />
+      <ResponseSection />
+      <EvidenceSection />
+      <BlockchainSection />
+      <CommandCenterSection />
+      <AdditionalSections />
+      <LandingFooter />
 
       {/* Mobile Drawer Navigation */}
       {isMenuOpen && (

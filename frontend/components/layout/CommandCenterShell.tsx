@@ -51,7 +51,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   }, [showToast]);
 
   if (isExcludedPage) {
-    return <main className="min-h-screen overflow-x-hidden">{children}</main>;
+    return <main className="h-screen overflow-y-auto overflow-x-hidden">{children}</main>;
   }
 
   return (
