@@ -22,4 +22,8 @@ export class AnalyticsController {
     try { res.json({ success: true, data: await AnalyticsService.getBopAnalytics() }); }
     catch (error) { next(error); }
   }
+  static async overview(req: Request, res: Response, next: NextFunction) {
+    try { res.json({ success: true, data: await AnalyticsService.getOverview() }); }
+    catch (error) { next(error); }
+  }
 }

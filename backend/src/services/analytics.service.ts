@@ -118,4 +118,23 @@ export class AnalyticsService {
       alerts: b._count.alerts,
     }));
   }
+
+  static async getOverview() {
+    const [alertAnalytics, eventAnalytics, cameraAnalytics, bopAnalytics] = await Promise.all([
+      this.getAlertAnalytics(),
+      this.getEventAnalytics(),
+      this.getCameraAnalytics(),
+      this.getBopAnalytics(),
+    ]);
+
+    return {
+      alertsByHour: alertAnalytics.alertsByHour,
+      eventsByDay: eventAnalytics.eventsByDay,
+      threatDistribution: eventAnalytics.threatDistribution,
+      bopEvents: bopAnalytics,
+      totalAlerts: alertAnalytics.totalAlerts,
+      totalEvents: eventAnalytics.totalEvents,
+      cameras: cameraAnalytics,
+    };
+  }
 }

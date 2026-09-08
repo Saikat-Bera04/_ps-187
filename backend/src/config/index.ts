@@ -27,6 +27,7 @@ export const config = {
   aiMode: (process.env.AI_MODE || 'mock') as 'mock' | 'service',
   aiServiceUrl: process.env.AI_SERVICE_URL || 'http://localhost:8000',
   aiServiceTimeout: parseInt(process.env.AI_SERVICE_TIMEOUT || '5000', 10),
+  aiApiKey: process.env.AI_API_KEY || 'ibvap-ai-dev-key-change-in-production',
 
   // Storage
   storageMode: (process.env.STORAGE_MODE || 'local') as 'minio' | 'local',

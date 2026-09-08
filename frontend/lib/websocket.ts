@@ -1,38 +1,64 @@
 type WSEventType = 'new_alert' | 'new_event' | 'camera_status_changed' | 'evidence_created' | 'blockchain_updated';
 
-interface WSMessage {
-  type: WSEventType;
-  data: Record<string, unknown>;
-  timestamp: string;
-}
+type WSListener = (data: Record<string, unknown>) => void;
 
-type WSListener = (msg: WSMessage) => void;
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
 
-class MockWebSocket {
+class IBVAPWebSocket {
+  private socket: import('socket.io-client').Socket | null = null;
   private listeners: Map<WSEventType, WSListener[]> = new Map();
-  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private connecting = false;
 
   connect() {
-    // Simulate periodic incoming events
-    this.intervalId = setInterval(() => {
-      const types: WSEventType[] = ['new_alert', 'new_event', 'camera_status_changed'];
-      const type = types[Math.floor(Math.random() * types.length)];
+    if (typeof window === 'undefined') return;
+    if (this.socket?.connected || this.connecting) return;
 
-      const msg: WSMessage = {
-        type,
-        data: this.generateMockPayload(type),
-        timestamp: new Date().toISOString(),
-      };
+    const token = localStorage.getItem('ibvap_token');
+    if (!token) return;
 
-      this.emit(type, msg);
-    }, 15000 + Math.random() * 30000); // every 15–45s
+    this.connecting = true;
+
+    import('socket.io-client').then(({ io }) => {
+      this.socket = io(WS_URL, {
+        auth: { token },
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 2000,
+      });
+
+      this.socket.on('connect', () => {
+        this.connecting = false;
+        console.info('[WS] Connected to IBVAP backend');
+      });
+
+      this.socket.on('connect_error', (err) => {
+        this.connecting = false;
+        console.warn('[WS] Connection failed:', err.message);
+      });
+
+      const events: WSEventType[] = [
+        'new_alert',
+        'new_event',
+        'camera_status_changed',
+        'evidence_created',
+        'blockchain_updated',
+      ];
+
+      for (const event of events) {
+        this.socket.on(event, (data: Record<string, unknown>) => {
+          this.emit(event, data);
+        });
+      }
+    }).catch((err) => {
+      this.connecting = false;
+      console.warn('[WS] Failed to load socket.io-client:', err);
+    });
   }
 
   disconnect() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
+    this.socket?.disconnect();
+    this.socket = null;
+    this.connecting = false;
   }
 
   on(event: WSEventType, listener: WSListener) {
@@ -43,27 +69,13 @@ class MockWebSocket {
 
   off(event: WSEventType, listener: WSListener) {
     const list = this.listeners.get(event) || [];
-    this.listeners.set(event, list.filter(l => l !== listener));
+    this.listeners.set(event, list.filter((l) => l !== listener));
   }
 
-  private emit(event: WSEventType, msg: WSMessage) {
+  private emit(event: WSEventType, data: Record<string, unknown>) {
     const list = this.listeners.get(event) || [];
-    list.forEach(l => l(msg));
-  }
-
-  private generateMockPayload(type: WSEventType): Record<string, unknown> {
-    const id = Math.floor(10000 + Math.random() * 90000);
-    switch (type) {
-      case 'new_alert':
-        return { alertId: `ALT-${id}`, severity: ['CRITICAL', 'HIGH', 'MEDIUM'][Math.floor(Math.random() * 3)], eventType: 'INTRUSION' };
-      case 'new_event':
-        return { eventId: `EVT-${id}`, eventType: 'PERSON_DETECTED', cameraId: 'BOP12-CAM04' };
-      case 'camera_status_changed':
-        return { cameraId: 'BOP21-CAM02', status: 'ONLINE' };
-      default:
-        return {};
-    }
+    list.forEach((l) => l(data));
   }
 }
 
-export const wsClient = new MockWebSocket();
+export const wsClient = new IBVAPWebSocket();

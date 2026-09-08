@@ -20,6 +20,7 @@ import blockchainRoutes from './routes/blockchain.routes';
 import watchlistRoutes from './routes/watchlist.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import systemRoutes from './routes/system.routes';
+import aiRoutes from './routes/ai.routes';
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use('/api/blockchain', blockchainRoutes);
 app.use('/api/watchlist', watchlistRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Error Handler
 app.use(errorHandler);

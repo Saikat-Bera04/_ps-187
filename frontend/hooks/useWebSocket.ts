@@ -10,8 +10,8 @@ export function useWebSocket(event: WSEventType, callback: (data: Record<string,
   callbackRef.current = callback;
 
   useEffect(() => {
-    const handler = (msg: { data: Record<string, unknown> }) => {
-      callbackRef.current(msg.data);
+    const handler = (data: Record<string, unknown>) => {
+      callbackRef.current(data);
     };
 
     wsClient.on(event, handler);

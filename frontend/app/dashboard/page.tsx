@@ -26,6 +26,7 @@ import type { Alert } from '@/types/alert';
 import type { IBVAPEvent } from '@/types/event';
 import type { Camera as CameraType, BOP } from '@/types/camera';
 import type { SystemHealth } from '@/types/system';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 export default function DashboardPage() {
   const { showToast } = useToast();
@@ -93,6 +94,14 @@ export default function DashboardPage() {
     }, 1000);
     return () => clearInterval(timer);
   }, [loadData]);
+
+  useWebSocket('new_alert', () => {
+    loadData();
+  });
+
+  useWebSocket('new_event', () => {
+    loadData();
+  });
 
   const handleAcknowledgeAlert = async (alertId: string) => {
     await updateAlertStatus(alertId, 'ACKNOWLEDGED');

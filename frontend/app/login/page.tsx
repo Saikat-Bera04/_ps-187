@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Shield, Eye, EyeOff, Lock, User, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { FaceScanner } from '@/components/ui/FaceScanner';
+import { login as apiLogin } from '@/lib/api';
 
 type LoginStep = 'CREDENTIALS' | 'FACE_VERIFICATION';
 
@@ -32,22 +33,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('http://localhost:4000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: username, password }),
-      });
-      const data = await res.json();
-      
-      if (!res.ok || !data.success) {
-        throw new Error(data.error?.message || 'Authentication failed');
-      }
-
-      // Store token
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('ibvap_token', data.data.accessToken);
-      }
-
+      await apiLogin(username, password);
       setIsLoading(false);
       setStep('FACE_VERIFICATION');
     } catch (err: any) {
