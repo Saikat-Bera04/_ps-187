@@ -1,4 +1,43 @@
 @import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+/* MapLibre Dark Mode Customizations */
+.maplibregl-popup-content {
+  background: #141C24 !important;
+  color: #F3F6F8 !important;
+  border: 1px solid #344454;
+  border-radius: 10px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3) !important;
+  padding: 0 !important;
+}
+.maplibregl-popup-tip {
+  border-top-color: #344454 !important;
+  border-bottom-color: #344454 !important;
+}
+.maplibregl-popup-close-button {
+  color: #A7B2BD !important;
+  right: 6px !important;
+  top: 6px !important;
+  font-size: 18px !important;
+}
+.maplibregl-popup-close-button:hover {
+  color: #F3F6F8 !important;
+  background: transparent !important;
+}
+.maplibregl-ctrl-group {
+  background-color: #141C24 !important;
+  border: 1px solid #344454 !important;
+}
+.maplibregl-ctrl-group button {
+  background-color: #141C24 !important;
+  border-bottom: 1px solid #263442 !important;
+}
+.maplibregl-ctrl-group button:hover {
+  background-color: #18222C !important;
+}
+.maplibregl-ctrl-icon {
+  filter: invert(1);
+}
 
 @theme {
   --color-ibvap-bg: #0A0F14;

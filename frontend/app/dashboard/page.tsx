@@ -9,7 +9,7 @@ import { CriticalAlertsList } from '@/components/dashboard/CriticalAlertsList';
 import { RecentEventsTable } from '@/components/dashboard/RecentEventsTable';
 import { CameraHealthSummary } from '@/components/dashboard/CameraHealthSummary';
 import { SystemHealthMini } from '@/components/dashboard/SystemHealthMini';
-import { BorderMap } from '@/components/map/BorderMap';
+import { DynamicBorderMap } from '@/components/map/DynamicBorderMap';
 import { CardSkeleton } from '@/components/ui/LoadingSkeleton';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -232,7 +232,9 @@ export default function DashboardPage() {
             Border Outpost Tactical Map & Active Incidents
           </h3>
         </div>
-        <BorderMap cameras={cameras} bops={bops} alerts={alerts} />
+        <div className="h-[400px]">
+          <DynamicBorderMap cameras={cameras} bops={bops} alerts={alerts} />
+        </div>
       </div>
     </div>
   );
