@@ -1,49 +1,42 @@
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
-/* Leaflet Dark Mode Customizations */
-.leaflet-container {
-  background: #0A0F14 !important;
-  font-family: inherit !important;
-}
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
+/* MapLibre Dark Mode Customizations */
+.maplibregl-popup-content {
   background: #141C24 !important;
   color: #F3F6F8 !important;
   border: 1px solid #344454;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3) !important;
-}
-.leaflet-popup-content-wrapper {
   border-radius: 10px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3) !important;
+  padding: 0 !important;
 }
-.leaflet-popup-tip-container {
-  margin-top: -1px;
+.maplibregl-popup-tip {
+  border-top-color: #344454 !important;
+  border-bottom-color: #344454 !important;
 }
-.leaflet-container a.leaflet-popup-close-button {
+.maplibregl-popup-close-button {
   color: #A7B2BD !important;
-  padding: 4px 6px 0 0 !important;
+  right: 6px !important;
+  top: 6px !important;
+  font-size: 18px !important;
 }
-.leaflet-container a.leaflet-popup-close-button:hover {
+.maplibregl-popup-close-button:hover {
   color: #F3F6F8 !important;
+  background: transparent !important;
 }
-.leaflet-popup-content {
-  margin: 12px 14px !important;
-  line-height: 1.4 !important;
-}
-.leaflet-control-zoom a {
+.maplibregl-ctrl-group {
   background-color: #141C24 !important;
-  color: #F3F6F8 !important;
-  border-color: #344454 !important;
+  border: 1px solid #344454 !important;
 }
-.leaflet-control-zoom a:hover {
+.maplibregl-ctrl-group button {
+  background-color: #141C24 !important;
+  border-bottom: 1px solid #263442 !important;
+}
+.maplibregl-ctrl-group button:hover {
   background-color: #18222C !important;
 }
-.leaflet-control-attribution {
-  background-color: rgba(10, 15, 20, 0.7) !important;
-  color: #6E7B87 !important;
-}
-.leaflet-control-attribution a {
-  color: #37B9FF !important;
+.maplibregl-ctrl-icon {
+  filter: invert(1);
 }
 
 @theme {

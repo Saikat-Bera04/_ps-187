@@ -17,16 +17,24 @@ export default function MapPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<string | undefined>();
 
   const loadData = async () => {
-    setIsLoading(true);
-    const [camsData, bopsData, alertsData] = await Promise.all([
-      getCameras(),
-      getBOPs(),
-      getAlerts(),
-    ]);
-    setCameras(camsData);
-    setBops(bopsData);
-    setAlerts(alertsData);
-    setIsLoading(false);
+    try {
+      setIsLoading(true);
+      const [camsData, bopsData, alertsData] = await Promise.all([
+        getCameras(),
+        getBOPs(),
+        getAlerts(),
+      ]);
+      setCameras(camsData);
+      setBops(bopsData);
+      setAlerts(alertsData);
+    } catch (err: any) {
+      console.error('Failed to load map data:', err);
+      if (err.message?.includes('token') || err.message?.includes('failed (401)')) {
+         window.location.href = '/login';
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

@@ -3,9 +3,9 @@ import React from 'react';
 import type { Camera as CameraType, BOP } from '@/types/camera';
 import type { Alert } from '@/types/alert';
 
-// Dynamically import the LeafletMap component with ssr: false
-// This ensures that Leaflet (which relies on the window object) only loads on the client
-const LeafletMap = dynamic(() => import('./LeafletMap'), {
+// Dynamically import the MapLibreMap component
+// MapLibre is generally safer for SSR but Next.js dynamic is still good for heavy client libraries
+const MapLibreMap = dynamic(() => import('./MapLibreMap'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-[#070D12] rounded-[10px] border border-[#263442]">
@@ -27,5 +27,5 @@ interface BorderMapProps {
 }
 
 export function DynamicBorderMap(props: BorderMapProps) {
-  return <LeafletMap {...props} />;
+  return <MapLibreMap {...props} />;
 }
