@@ -90,7 +90,7 @@ export default function MapPage() {
                   const cam = cameras.find(c => c.id === alert.cameraId);
                   return (
                     <div 
-                      key={alert.id} 
+                      key={alert.alertId} 
                       className="bg-[#18222C] border border-[#344454] rounded-lg p-3 hover:border-[#FF5C67]/50 transition-colors cursor-pointer"
                       onClick={() => setSelectedCameraId(alert.cameraId)}
                     >
@@ -100,7 +100,7 @@ export default function MapPage() {
                       </div>
                       <p className="text-xs text-[#F3F6F8] mb-2">{alert.description}</p>
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-[#6E7B87]">{new Date(alert.createdAt).toLocaleTimeString()}</span>
+                        <span className="text-[#6E7B87]">{new Date(alert.timestamp).toLocaleTimeString()}</span>
                         <Link
                           href={`/cameras/${alert.cameraId}`}
                           className="text-[#37B9FF] hover:text-[#37B9FF]/80 flex items-center gap-1 font-semibold"

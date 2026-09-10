@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useMemo } from 'react';
 import Map, { Marker, Popup, NavigationControl, ViewStateChangeEvent } from 'react-map-gl/maplibre';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import Link from 'next/link';
 import { Camera, Shield, Eye, AlertTriangle } from 'lucide-react';
@@ -180,7 +180,7 @@ export default function MapLibreMap({
               <div className="flex items-start justify-between mb-2 pr-4">
                 <div>
                   <span className="text-sm font-mono font-bold text-[#F3F6F8]">
-                    {activeMarker.camera.cameraCode || activeMarker.camera.id}
+                    {activeMarker.camera.name || activeMarker.camera.id}
                   </span>
                   <span className="text-xs text-[#A7B2BD] block font-mono mt-0.5">
                     {activeMarker.camera.bopId} • {activeMarker.camera.status}
