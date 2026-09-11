@@ -2,18 +2,30 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, Video, Cpu, Activity, ShieldAlert, Settings, User, Car, ScanFace, CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { VideoPlayer } from '@/components/cameras/VideoPlayer';
 import { VirtualFenceEditor } from '@/components/cameras/VirtualFenceEditor';
+import { VideoAnalysis } from '@/components/cameras/VideoAnalysis';
 import { getCamera, replaceCameraZones } from '@/lib/api';
 import { formatTimestamp } from '@/lib/utils';
 import type { Camera } from '@/types/camera';
 
 export default function CameraDetailPage({ params }: { params: { id: string } }) {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') === 'VIDEO' ? 'VIDEO' : 'LIVE';
   const [camera, setCamera] = useState<Camera | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'LIVE' | 'VIDEO'>(initialTab);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'VIDEO') {
+      setActiveTab('VIDEO');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     getCamera(params.id).then((data) => {
@@ -21,6 +33,7 @@ export default function CameraDetailPage({ params }: { params: { id: string } })
       setIsLoading(false);
     });
   }, [params.id]);
+
 
   if (isLoading) {
     return (
@@ -80,63 +93,89 @@ export default function CameraDetailPage({ params }: { params: { id: string } })
         }
       />
 
+      {/* Tabs */}
+      <div className="flex space-x-2 bg-[#141C24] p-1 rounded-lg w-fit">
+        <button
+          onClick={() => setActiveTab('LIVE')}
+          className={`px-4 py-2 text-xs font-bold rounded-md transition-colors ${
+            activeTab === 'LIVE' ? 'bg-[#37B9FF] text-[#0A0F14]' : 'text-[#A7B2BD] hover:text-[#F3F6F8]'
+          }`}
+        >
+          LIVE
+        </button>
+        <button
+          onClick={() => setActiveTab('VIDEO')}
+          className={`px-4 py-2 text-xs font-bold rounded-md transition-colors ${
+            activeTab === 'VIDEO' ? 'bg-[#37B9FF] text-[#0A0F14]' : 'text-[#A7B2BD] hover:text-[#F3F6F8]'
+          }`}
+        >
+          VIDEO ANALYSIS
+        </button>
+      </div>
+
       {/* ─── SECTION: VIDEO PLAYER (LEFT) & INFO PANEL (RIGHT) (Section 26) ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Large Video Player */}
         <div className="lg:col-span-8 space-y-4">
-          <VideoPlayer
-            camera={camera}
-            isLive={camera.status === 'ONLINE'}
-            className="w-full shadow-2xl"
-          />
+          {activeTab === 'LIVE' ? (
+            <>
+              <VideoPlayer
+                camera={camera}
+                isLive={camera.status === 'ONLINE'}
+                className="w-full shadow-2xl"
+              />
 
-          {/* Current Detections Pill List (Section 26) */}
-          <div className="bg-[#141C24] border border-[#263442] rounded-[10px] p-4 space-y-3">
-            <div className="text-xs font-semibold uppercase tracking-wider text-[#A7B2BD]">
-              Active Edge AI Sensor Detections
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 bg-[#0F151C] border border-[#263442] rounded-[8px] flex items-center gap-2.5">
-                <div className="p-2 rounded bg-[#37B9FF]/15 text-[#37B9FF]">
-                  <User className="w-4 h-4" />
+              {/* Current Detections Pill List (Section 26) */}
+              <div className="bg-[#141C24] border border-[#263442] rounded-[10px] p-4 space-y-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-[#A7B2BD]">
+                  Active Edge AI Sensor Detections
                 </div>
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-[#6E7B87]">Person Model</div>
-                  <div className="text-xs font-bold text-[#F3F6F8]">1 Detected</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 bg-[#0F151C] border border-[#263442] rounded-[8px] flex items-center gap-2.5">
+                    <div className="p-2 rounded bg-[#37B9FF]/15 text-[#37B9FF]">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase font-bold text-[#6E7B87]">Person Model</div>
+                      <div className="text-xs font-bold text-[#F3F6F8]">1 Detected</div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-[#0F151C] border border-[#263442] rounded-[8px] flex items-center gap-2.5">
+                    <div className="p-2 rounded bg-[#F4C95D]/15 text-[#F4C95D]">
+                      <Car className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase font-bold text-[#6E7B87]">Vehicle Model</div>
+                      <div className="text-xs font-bold text-[#F3F6F8]">0 In View</div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-[#0F151C] border border-[#263442] rounded-[8px] flex items-center gap-2.5">
+                    <div className="p-2 rounded bg-[#39D98A]/15 text-[#39D98A]">
+                      <ScanFace className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase font-bold text-[#6E7B87]">Face Recognizer</div>
+                      <div className="text-xs font-bold text-[#39D98A]">Standby</div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-[#0F151C] border border-[#263442] rounded-[8px] flex items-center gap-2.5">
+                    <div className="p-2 rounded bg-[#63A8FF]/15 text-[#63A8FF]">
+                      <Activity className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase font-bold text-[#6E7B87]">ANPR OCR</div>
+                      <div className="text-xs font-bold text-[#37B9FF]">Active (98%)</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div className="p-3 bg-[#0F151C] border border-[#263442] rounded-[8px] flex items-center gap-2.5">
-                <div className="p-2 rounded bg-[#F4C95D]/15 text-[#F4C95D]">
-                  <Car className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-[#6E7B87]">Vehicle Model</div>
-                  <div className="text-xs font-bold text-[#F3F6F8]">0 In View</div>
-                </div>
-              </div>
-
-              <div className="p-3 bg-[#0F151C] border border-[#263442] rounded-[8px] flex items-center gap-2.5">
-                <div className="p-2 rounded bg-[#39D98A]/15 text-[#39D98A]">
-                  <ScanFace className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-[#6E7B87]">Face Recognizer</div>
-                  <div className="text-xs font-bold text-[#39D98A]">Standby</div>
-                </div>
-              </div>
-
-              <div className="p-3 bg-[#0F151C] border border-[#263442] rounded-[8px] flex items-center gap-2.5">
-                <div className="p-2 rounded bg-[#63A8FF]/15 text-[#63A8FF]">
-                  <Activity className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-[#6E7B87]">ANPR OCR</div>
-                  <div className="text-xs font-bold text-[#37B9FF]">Active (98%)</div>
-                </div>
-              </div>
-            </div>
-          </div>
+            </>
+          ) : (
+            <VideoAnalysis cameraId={camera.id} />
+          )}
         </div>
 
         {/* Information Panel (Right) */}

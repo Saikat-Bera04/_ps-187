@@ -5,6 +5,7 @@ import { Camera, Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { CameraTable } from '@/components/cameras/CameraTable';
 import { AddCameraModal } from '@/components/cameras/AddCameraModal';
+import { UploadCustomVideoModal } from '@/components/cameras/UploadCustomVideoModal';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { useCameras } from '@/hooks/useCameras';
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
@@ -12,6 +13,7 @@ import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
 export default function CamerasPage() {
   const { cameras, isLoading, addCamera, deleteCamera, toggleStatus } = useCameras();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [bopFilter, setBopFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -34,13 +36,21 @@ export default function CamerasPage() {
         title="Cameras"
         subtitle="Manage connected border surveillance cameras, RTSP streams, and edge AI detection models."
         actions={
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#37B9FF] hover:bg-[#37B9FF]/90 text-[#071018] rounded-[7px] text-xs font-bold transition-all shadow-lg"
-          >
-            <Plus className="w-4 h-4" />
-            Add Camera
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#18222C] border border-[#344454] hover:bg-[#1E2A35] text-[#F3F6F8] rounded-[7px] text-xs font-bold transition-all shadow-lg"
+            >
+              Upload Custom Video
+            </button>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#37B9FF] hover:bg-[#37B9FF]/90 text-[#071018] rounded-[7px] text-xs font-bold transition-all shadow-lg"
+            >
+              <Plus className="w-4 h-4" />
+              Add Camera
+            </button>
+          </div>
         }
       />
 
@@ -108,6 +118,12 @@ export default function CamerasPage() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAdd={addCamera}
+      />
+
+      {/* Upload Custom Video Modal */}
+      <UploadCustomVideoModal 
+        isOpen={isUploadModalOpen} 
+        onClose={() => setIsUploadModalOpen(false)} 
       />
     </div>
   );
