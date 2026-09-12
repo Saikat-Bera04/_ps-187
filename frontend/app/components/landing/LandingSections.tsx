@@ -151,14 +151,46 @@ export function ResponseSection() {
       </p>
 
       {/* Alert Card Mockup */}
-      <div className="w-full max-w-2xl bg-[#0F151C] border border-[#FF5C67]/30 rounded-none overflow-hidden shadow-2xl shadow-[#FF5C67]/5">
+      <div className="w-full max-w-2xl bg-[#0F151C] border border-[#FF5C67]/30 rounded-none overflow-hidden shadow-2xl shadow-[#FF5C67]/10">
         <div className="bg-red-500/10 px-6 py-4 flex items-center justify-between border-b border-[#FF5C67]/20">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-            <span className="text-red-500 font-bold text-sm tracking-wider">CRITICAL ALERT</span>
+            <span className="text-red-500 font-bold text-sm tracking-wider">CRITICAL ALERT DISPATCH</span>
           </div>
-          <span className="text-white font-mono text-xs opacity-60">ACTIVE</span>
+          <div className="flex items-center gap-2">
+            <span className="text-white font-mono text-xs opacity-75">LIVE SECTOR INTERCEPT</span>
+          </div>
         </div>
+
+        {/* Tactical Image Preview with AI Bounding Box */}
+        <div className="relative h-56 sm:h-64 w-full bg-black overflow-hidden border-b border-border">
+          <img
+            src="/hero-images/border-fencing.jpeg"
+            alt="Intrusion Detection Feed"
+            className="w-full h-full object-cover opacity-90"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0F151C] via-transparent to-black/30 pointer-events-none" />
+
+          {/* AI Bounding Box Overlay */}
+          <div className="absolute top-[28%] left-[32%] w-36 h-28 border-2 border-red-500 bg-red-500/15 pointer-events-none animate-pulse">
+            <div className="absolute -top-5 left-0 bg-red-500 text-black px-1.5 py-0.5 text-[9px] font-mono font-bold tracking-wider">
+              TARGET: INTRUDER [96.2%]
+            </div>
+            <div className="absolute -bottom-4 right-0 text-[9px] font-mono text-white bg-black/80 px-1">
+              BOP-012 LINE
+            </div>
+          </div>
+
+          {/* HUD Telemetry in Feed */}
+          <div className="absolute top-3 left-3 flex items-center gap-2 text-[10px] font-mono text-white bg-black/60 backdrop-blur px-2.5 py-1 border border-white/15">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+            <span>CAM-004 • LIVE STREAM 30 FPS</span>
+          </div>
+          <div className="absolute top-3 right-3 text-[10px] font-mono text-accent bg-black/60 backdrop-blur px-2.5 py-1 border border-white/15">
+            LAT 32.418° N • LONG 74.892° E
+          </div>
+        </div>
+
         <div className="p-6 md:p-8">
           <h3 className="text-white text-2xl font-bold mb-6">RESTRICTED ZONE INTRUSION</h3>
           
@@ -230,13 +262,32 @@ export function EvidenceSection() {
         <div className="bg-card border border-border rounded-none p-6 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#8b5cf6] to-[#37B9FF]"></div>
           
-          <div className="flex justify-between items-start mb-8">
+          <div className="flex justify-between items-start mb-6">
             <div>
               <div className="text-[#8e8e8e] text-xs uppercase tracking-wider mb-1">Evidence ID</div>
               <div className="text-white font-mono text-lg">EVD-10021</div>
             </div>
             <div className="px-3 py-1 bg-[#39D98A]/10 border border-[#39D98A]/30 rounded text-green-500 text-[10px] font-bold tracking-widest flex items-center gap-1.5">
               <CheckCircle className="w-3 h-3" /> VERIFIED
+            </div>
+          </div>
+
+          {/* Cryptographically Sealed Captured Frame */}
+          <div className="relative h-44 w-full rounded-none overflow-hidden mb-6 border border-border bg-black">
+            <img
+              src="/hero-images/patrol-combat.jpeg"
+              alt="Cryptographically Verified Incident Capture"
+              className="w-full h-full object-cover opacity-85"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none" />
+            <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-black/75 backdrop-blur border border-white/10 text-[9px] font-mono font-bold text-accent">
+              SECURE INCIDENT CAPTURE FRAME #08492
+            </div>
+            <div className="absolute bottom-2.5 inset-x-2.5 flex items-center justify-between text-[10px] font-mono text-gray-300">
+              <span className="flex items-center gap-1.5 text-green-500 font-semibold">
+                <ShieldCheck className="w-3.5 h-3.5" /> FABRIC AUDIT SEALED
+              </span>
+              <span className="text-white/70">CAM-004 • 02:41:39 IST</span>
             </div>
           </div>
 
@@ -340,6 +391,36 @@ export function CommandCenterSection() {
           <div key={i} className="bg-card border border-border p-5 rounded-none">
             <div className="text-[#8e8e8e] text-xs uppercase tracking-wider mb-2">{stat.label}</div>
             <div className={`font-mono text-2xl ${stat.color || 'text-white'}`}>{stat.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Live Sector Camera Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10 w-full">
+        {[
+          { image: '/hero-images/siachen-flag.jpeg', sector: 'Sector 01', name: 'High-Altitude Glacier Outpost', cam: 'CAM-012', status: 'ONLINE', fps: '30 FPS' },
+          { image: '/hero-images/border-fencing.jpeg', sector: 'Sector 04', name: 'International Border Fencing', cam: 'CAM-044', status: 'PATROL ACTIVE', fps: '25 FPS' },
+          { image: '/hero-images/special-forces.jpeg', sector: 'Sector 09', name: 'Rapid Reaction Force Wing', cam: 'CAM-081', status: 'STANDBY', fps: '30 FPS' },
+          { image: '/hero-images/wire-patrol.jpeg', sector: 'Sector 12', name: 'Perimeter Barbed Wire Grid', cam: 'CAM-105', status: 'SECURE', fps: '25 FPS' },
+        ].map((item, i) => (
+          <div key={i} className="group bg-[#0A0E13] border border-border overflow-hidden rounded-none hover:border-accent transition-all">
+            <div className="relative h-36 w-full overflow-hidden">
+              <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+              <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-black/75 border border-white/15 text-[9px] font-mono text-accent font-bold">
+                {item.sector}
+              </div>
+              <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/75 px-1.5 py-0.5 text-[9px] font-mono text-green-500 border border-white/15">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                {item.status}
+              </div>
+              <div className="absolute bottom-1.5 left-2 text-[10px] font-mono text-white/80">
+                {item.cam} • {item.fps}
+              </div>
+            </div>
+            <div className="p-3">
+              <h4 className="text-white text-xs font-bold truncate">{item.name}</h4>
+            </div>
           </div>
         ))}
       </div>

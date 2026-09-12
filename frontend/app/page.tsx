@@ -15,6 +15,7 @@ import {
   AdditionalSections, 
   LandingFooter 
 } from './components/landing/LandingSections';
+import { TacticalImageStack } from './components/landing/TacticalImageStack';
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -249,6 +250,9 @@ export default function LandingPage() {
           </div>
         </footer>
       </main>
+
+      {/* TACTICAL RECONNAISSANCE IMAGE STACK */}
+      <TacticalImageStack />
 
       {/* NEW MARKETING SECTIONS */}
       <ProblemSection />
