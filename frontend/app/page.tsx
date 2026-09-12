@@ -85,24 +85,22 @@ export default function LandingPage() {
 
   return (
     <div className="landing-container">
-      {/* ─── FULL BLEED BACKGROUND VIDEO ─── */}
-      <div className="landing-bg">
-        <video
-          className="landing-bg-video"
-          autoPlay
-          muted
-          loop
-          playsInline
-        >
-          <source
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="landing-overlay" />
-      </div>
-
       <main className="landing-page">
+        {/* ─── HERO BACKGROUND VIDEO ─── */}
+        <div className="landing-bg" aria-hidden="true">
+          <video
+            className="landing-bg-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+          >
+            <source src="/landing.webm" type="video/webm" />
+          </video>
+          <div className="landing-overlay" />
+        </div>
+
         {/* ─── FLOATING PILL HEADER ─── */}
         <header className="landing-header">
           <Link href="/" className="landing-logo overflow-hidden flex items-center justify-center p-1" aria-label="IBVAP Home">
