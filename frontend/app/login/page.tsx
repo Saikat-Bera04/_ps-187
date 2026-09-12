@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Shield, Eye, EyeOff, Lock, User, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { FaceScanner } from '@/components/ui/FaceScanner';
@@ -67,10 +68,12 @@ export default function LoginPage() {
       {/* ─── SIDE 1: FULL IMAGE PANEL (ENTIRE SIDE ON DESKTOP, HERO BANNER ON MOBILE) ─── */}
       <div className="w-full lg:w-1/2 h-56 sm:h-72 lg:h-auto lg:min-h-screen relative shrink-0 overflow-hidden bg-black flex flex-col justify-between p-6 sm:p-10 lg:p-14 xl:p-16">
         {/* Full-bleed background image */}
-        <img
+        <Image
           src="/signin.jpg"
           alt="Siachen Border Security Force Salute"
-          className="absolute inset-0 w-full h-full object-cover object-center scale-100 lg:scale-105 transition-transform duration-1000"
+          fill
+          priority
+          className="object-cover object-center scale-100 lg:scale-105 transition-transform duration-1000"
         />
 
         {/* Gradient overlays for cinematic depth and contrast */}
@@ -119,7 +122,7 @@ export default function LoginPage() {
         <div className="flex items-center justify-between pb-4 sm:pb-6 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-none bg-accent/15 border border-[#37B9FF]/30 flex items-center justify-center overflow-hidden">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain p-1" />
+              <Image src="/logo.png" alt="Logo" width={36} height={36} className="w-full h-full object-contain p-1" priority />
             </div>
             <div>
               <div className="text-sm sm:text-base font-bold tracking-tight text-white">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Shield, ArrowRight, Video, Lock, Radio, Activity } from 'lucide-react';
 import './landing.css';
 import { 
@@ -105,7 +106,7 @@ export default function LandingPage() {
         {/* ─── FLOATING PILL HEADER ─── */}
         <header className="landing-header">
           <Link href="/" className="landing-logo overflow-hidden flex items-center justify-center p-1" aria-label="IBVAP Home">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+            <Image src="/logo.png" alt="Logo" width={40} height={40} className="w-full h-full object-contain" priority />
           </Link>
 
           <nav className="landing-nav-pill landing-desktop-nav">
@@ -274,7 +275,7 @@ export default function LandingPage() {
           <div className="flex justify-between items-center pb-6 border-b border-border">
             <div className="flex items-center gap-2 text-white font-bold">
               <div className="w-7 h-7 rounded-none bg-accent/15 border border-[#37B9FF]/30 flex items-center justify-center overflow-hidden">
-                <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+                <Image src="/logo.png" alt="Logo" width={28} height={28} className="w-full h-full object-cover" />
               </div>
               <span>IBVAP Command</span>
             </div>

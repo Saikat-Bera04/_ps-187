@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Shield, Eye, ChevronRight, ChevronLeft, MapPin, Radio, Crosshair } from 'lucide-react';
 
 export interface TacticalCard {
@@ -167,10 +168,12 @@ export function TacticalImageStack() {
                 className={`absolute inset-x-0 mx-auto max-w-[540px] h-[340px] sm:h-[370px] rounded-none border border-[#2B3947] bg-[#0A0E13] overflow-hidden shadow-2xl cursor-pointer transition-all duration-500 ease-out hover:border-accent group`}
               >
                 {/* Image */}
-                <img
+                <Image
                   src={card.image}
                   alt={card.sector}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-700"
+                  priority={idx === 0}
                 />
 
                 {/* Dark Vignette & Tactical Gradients */}

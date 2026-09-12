@@ -30,6 +30,7 @@ import {
   Layers
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function ProblemSection() {
   return (
@@ -164,10 +165,11 @@ export function ResponseSection() {
 
         {/* Tactical Image Preview with AI Bounding Box */}
         <div className="relative h-56 sm:h-64 w-full bg-black overflow-hidden border-b border-border">
-          <img
+          <Image
             src="/hero-images/border-fencing.jpeg"
             alt="Intrusion Detection Feed"
-            className="w-full h-full object-cover opacity-90"
+            fill
+            className="object-cover opacity-90"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0F151C] via-transparent to-black/30 pointer-events-none" />
 
@@ -274,10 +276,11 @@ export function EvidenceSection() {
 
           {/* Cryptographically Sealed Captured Frame */}
           <div className="relative h-44 w-full rounded-none overflow-hidden mb-6 border border-border bg-black">
-            <img
+            <Image
               src="/hero-images/patrol-combat.jpeg"
               alt="Cryptographically Verified Incident Capture"
-              className="w-full h-full object-cover opacity-85"
+              fill
+              className="object-cover opacity-85"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none" />
             <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-black/75 backdrop-blur border border-white/10 text-[9px] font-mono font-bold text-accent">
@@ -405,7 +408,7 @@ export function CommandCenterSection() {
         ].map((item, i) => (
           <div key={i} className="group bg-[#0A0E13] border border-border overflow-hidden rounded-none hover:border-accent transition-all">
             <div className="relative h-36 w-full overflow-hidden">
-              <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
               <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-black/75 border border-white/15 text-[9px] font-mono text-accent font-bold">
                 {item.sector}

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { NAV_ITEMS } from '@/lib/constants';
 import * as LucideIcons from 'lucide-react';
@@ -30,7 +31,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
       <div className="h-16 flex items-center justify-between px-4 border-b border-border bg-background">
         <Link href="/dashboard" className="flex items-center gap-3 overflow-hidden">
           <div className="w-9 h-9 rounded-none bg-accent/15 border border-[#37B9FF]/30 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+            <Image src="/logo.png" alt="Logo" width={36} height={36} className="w-full h-full object-cover" priority />
           </div>
           {!collapsed && (
             <div className="truncate">
