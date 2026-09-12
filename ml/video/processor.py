@@ -2,6 +2,7 @@ import os
 import cv2
 import time
 import logging
+import base64
 from ultralytics import YOLO
 
 logger = logging.getLogger(__name__)
@@ -18,10 +19,6 @@ class VideoProcessor:
         self.model = YOLO(model_path)
     
     def process_video(self, video_path: str, progress_callback=None, frame_skip: int = None):
-        """
-        Process a video file with YOLO and ByteTrack.
-        frame_skip: process every n-th frame (adapted automatically if None for optimal speed).
-        """
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             logger.error(f"Failed to open video: {video_path}")
@@ -31,8 +28,6 @@ class VideoProcessor:
         fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
         duration = total_frames / fps if fps else 0
 
-        # Adapt frame skip so long videos (e.g. 20,000+ frames) process in reasonable time (~40-60s)
-        # while short clips maintain fine-grained frame analysis
         if frame_skip is None or frame_skip <= 2:
             if total_frames > 2000:
                 frame_skip = max(4, min(30, total_frames // 400))
@@ -41,13 +36,14 @@ class VideoProcessor:
         
         logger.info(f"Processing video: {video_path}, Total Frames: {total_frames}, FPS: {fps:.2f}, Frame Skip: {frame_skip}")
         
-        # Track unique IDs seen across the entire video
         unique_vehicle_ids = set()
         unique_person_ids = set()
         
-        # Persistent track cache in case ByteTrack doesn't assign track IDs on first frame
         anonymous_vehicle_counter = 0
         anonymous_person_counter = 0
+
+        track_frame_counts = {}
+        reported_loitering = set()
 
         frame_idx = 0
         pending_events = []
@@ -59,12 +55,10 @@ class VideoProcessor:
                 break
             frame_idx += 1
 
-            # Skip frames according to frame_skip, but always process the last frame
             if frame_skip > 1 and (frame_idx % frame_skip != 0) and (frame_idx != total_frames):
                 continue
 
             try:
-                # Run YOLO tracking with ByteTrack
                 results = self.model.track(
                     source=frame,
                     tracker="bytetrack.yaml",
@@ -73,7 +67,6 @@ class VideoProcessor:
                     verbose=False
                 )
             except Exception as track_err:
-                # Fallback to standard prediction if tracker encounters single-frame issue
                 results = self.model.predict(source=frame, conf=0.28, verbose=False)
 
             frame_events = []
@@ -86,7 +79,6 @@ class VideoProcessor:
                         cls_name = res.names[cls_id] if res.names and cls_id in res.names else str(cls_id)
                         conf = float(box.conf[0].item())
                         
-                        # Get track ID if available
                         track_id = None
                         if box.id is not None:
                             try:
@@ -98,6 +90,11 @@ class VideoProcessor:
 
                         is_vehicle = cls_name in VEHICLE_CLASSES
                         is_person = cls_name in PERSON_CLASSES
+
+                        if track_id is not None:
+                            track_frame_counts[track_id] = track_frame_counts.get(track_id, 0) + 1
+
+                        evidence_frame = None
 
                         if is_vehicle:
                             if track_id is not None:
@@ -115,7 +112,8 @@ class VideoProcessor:
                                     "confidence": conf,
                                     "trackId": track_id or anonymous_vehicle_counter,
                                     "bbox": bbox,
-                                    "frame": frame_idx
+                                    "frame": frame_idx,
+                                    "severity": "INFO"
                                 })
 
                         elif is_person:
@@ -126,15 +124,43 @@ class VideoProcessor:
                                 anonymous_person_counter += 1
                                 is_new = True
 
+                            # AI Rule: Intrusion Detection
+                            # Assuming any person is an intrusion for this use case
                             if is_new:
+                                _, buffer = cv2.imencode('.jpg', frame)
+                                evidence_frame = base64.b64encode(buffer).decode('utf-8')
                                 frame_events.append({
-                                    "type": "PERSON_DETECTED",
+                                    "type": "INTRUSION_DETECTED",
                                     "objectType": "PERSON",
                                     "subType": cls_name,
                                     "confidence": conf,
                                     "trackId": track_id or anonymous_person_counter,
                                     "bbox": bbox,
-                                    "frame": frame_idx
+                                    "frame": frame_idx,
+                                    "severity": "CRITICAL",
+                                    "threatScore": 90,
+                                    "evidenceFrame": evidence_frame
+                                })
+
+                            # AI Rule: Loitering Detection
+                            # If a person is tracked for more than 15 frames
+                            if track_id is not None and track_frame_counts[track_id] > 15 and track_id not in reported_loitering:
+                                reported_loitering.add(track_id)
+                                if not evidence_frame:
+                                    _, buffer = cv2.imencode('.jpg', frame)
+                                    evidence_frame = base64.b64encode(buffer).decode('utf-8')
+                                
+                                frame_events.append({
+                                    "type": "LOITERING_DETECTED",
+                                    "objectType": "PERSON",
+                                    "subType": cls_name,
+                                    "confidence": conf,
+                                    "trackId": track_id,
+                                    "bbox": bbox,
+                                    "frame": frame_idx,
+                                    "severity": "WARNING",
+                                    "threatScore": 75,
+                                    "evidenceFrame": evidence_frame
                                 })
 
             if frame_events:
@@ -143,7 +169,6 @@ class VideoProcessor:
             total_vehicles = len(unique_vehicle_ids) + anonymous_vehicle_counter
             total_persons = len(unique_person_ids) + anonymous_person_counter
 
-            # Send progress callback throttled to at most once per 0.75s, or on the final frame
             now = time.time()
             is_last = (frame_idx >= total_frames)
             time_elapsed = (now - last_progress_time) >= 0.75
@@ -166,4 +191,3 @@ class VideoProcessor:
 
         cap.release()
         logger.info(f"Video processing completed: {frame_idx} frames processed. Vehicles: {len(unique_vehicle_ids) + anonymous_vehicle_counter}, Persons: {len(unique_person_ids) + anonymous_person_counter}")
-

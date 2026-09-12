@@ -2,6 +2,12 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 import { addVideoJob } from '../queue/video.queue';
 import { emitEvent } from '../websocket/socket';
+import { EventService } from '../services/event.service';
+import { BlockchainService } from '../services/blockchain.service';
+import { calculateSHA256 } from '../utils/hash';
+import fs from 'fs';
+import path from 'path';
+import { config } from '../config';
 
 export const uploadVideo = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -132,7 +138,7 @@ export const updateProgress = async (req: Request, res: Response): Promise<void>
             data: {
               videoId: videoJob.id,
               type: ev.type || 'VEHICLE_DETECTED',
-              severity: 'INFO',
+              severity: ev.severity || 'INFO',
               timestamp: (ev.frame && videoJob.fps) ? ev.frame / videoJob.fps : 0,
               frameNumber: ev.frame || null,
               confidence: ev.confidence || null,
@@ -143,6 +149,83 @@ export const updateProgress = async (req: Request, res: Response): Promise<void>
           });
         } catch (dbErr) {
           // Non-blocking event logging
+        }
+
+        // --- AI Rule Engine: Handle High-Severity Threats (Intrusion/Loitering) ---
+        if (ev.severity === 'CRITICAL' || ev.severity === 'WARNING') {
+          try {
+            // 1. Create System Event
+            const systemEvent = await EventService.create({
+              eventCode: `EVT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              eventType: ev.type === 'INTRUSION_DETECTED' ? 'INTRUSION' : (ev.type === 'LOITERING_DETECTED' ? 'LOITERING' : 'SUSPICIOUS_ACTIVITY'),
+              objectType: ev.objectType || 'PERSON',
+              cameraCode: camera?.cameraCode || 'UNKNOWN',
+              bopCode: bopCode || 'UNKNOWN',
+              trackId: ev.trackId,
+              confidence: ev.confidence || 0.8,
+              zone: 'DEFAULT_ZONE',
+              severity: ev.severity,
+              threatScore: ev.threatScore || 80,
+            });
+
+            // 2. Save Evidence Frame (if provided)
+            if (ev.evidenceFrame) {
+              const evidenceBuffer = Buffer.from(ev.evidenceFrame, 'base64');
+              const evidenceHash = calculateSHA256(evidenceBuffer);
+              
+              const evidenceDir = path.resolve(config.localStoragePath || './uploads', 'evidence');
+              fs.mkdirSync(evidenceDir, { recursive: true });
+              const fileName = `evd-${Date.now()}.jpg`;
+              const filePath = path.join(evidenceDir, fileName);
+              
+              fs.writeFileSync(filePath, evidenceBuffer);
+
+              // 3. Create Evidence Record
+              const evidenceCode = `EVD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+              const evidence = await prisma.evidence.create({
+                data: {
+                  evidenceCode,
+                  evidenceType: 'FRAME',
+                  hash: evidenceHash,
+                  filePath,
+                  fileSizeKB: Math.round(evidenceBuffer.length / 1024),
+                  recordedBy: 'AI_SYSTEM',
+                  recordedOrg: 'IBVAP',
+                  verificationStatus: 'PENDING',
+                  timestamp: new Date(),
+                  event: { connect: { eventCode: systemEvent.eventId } },
+                  camera: { connect: { id: camera!.id } },
+                  bop: { connect: { id: camera!.bopId } }
+                }
+              });
+
+              // 4. Register to Blockchain
+              try {
+                await BlockchainService.registerEvidence(evidence.id);
+              } catch (bcErr) {
+                console.error('Blockchain registration failed for evidence:', evidence.id, bcErr);
+              }
+            }
+            
+            // 5. Create Alert
+            await prisma.alert.create({
+              data: {
+                alertCode: `ALT-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                eventType: ev.type,
+                severity: ev.severity,
+                threatScore: ev.threatScore || 80,
+                status: 'NEW',
+                description: `High severity ${ev.type} detected on camera ${camera?.name}`,
+                timestamp: new Date(),
+                event: { connect: { eventCode: systemEvent.eventId } },
+                camera: { connect: { id: camera!.id } },
+                bop: { connect: { id: camera!.bopId } }
+              }
+            });
+
+          } catch (err) {
+            console.error('Failed to create system event/evidence for video threat:', err);
+          }
         }
       }
     }

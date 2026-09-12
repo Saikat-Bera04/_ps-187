@@ -189,26 +189,26 @@ export function VideoAnalysis({ cameraId }: VideoAnalysisProps) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#141C24] border border-[#263442] rounded-[10px] p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#263442] pb-4">
+      <div className="bg-card border border-border rounded-none p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
           <div>
-            <h3 className="text-base font-bold text-[#F3F6F8]">CCTV Video Edge AI Analysis</h3>
-            <p className="text-xs text-[#A7B2BD]">Frame-by-frame object detection, vehicle tracking, and event classification.</p>
+            <h3 className="text-base font-bold text-foreground">CCTV Video Edge AI Analysis</h3>
+            <p className="text-xs text-muted-foreground">Frame-by-frame object detection, vehicle tracking, and event classification.</p>
           </div>
           {videoId && (
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRetry}
                 disabled={isRetrying || status === 'PROCESSING'}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#18222C] border border-[#344454] hover:bg-[#1E2A35] text-[#F3F6F8] rounded-[7px] text-xs font-semibold disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-muted border border-border hover:bg-muted text-foreground rounded-none text-xs font-semibold disabled:opacity-50 transition-colors"
                 title="Re-run AI analysis with YOLO model"
               >
-                <RefreshCw className={`w-3.5 h-3.5 text-[#37B9FF] ${isRetrying || status === 'PROCESSING' ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 text-accent ${isRetrying || status === 'PROCESSING' ? 'animate-spin' : ''}`} />
                 {isRetrying ? 'Re-queueing...' : 'Re-run Analysis'}
               </button>
               <button
                 onClick={() => { setVideoId(null); setFile(null); setStatus('IDLE'); }}
-                className="px-3 py-1.5 bg-[#18222C] border border-[#344454] hover:bg-[#1E2A35] text-[#A7B2BD] hover:text-[#F3F6F8] rounded-[7px] text-xs font-semibold transition-colors"
+                className="px-3 py-1.5 bg-muted border border-border hover:bg-muted text-muted-foreground hover:text-foreground rounded-none text-xs font-semibold transition-colors"
               >
                 Upload Another
               </button>
@@ -217,18 +217,18 @@ export function VideoAnalysis({ cameraId }: VideoAnalysisProps) {
         </div>
 
         {!videoId && (
-          <div className="max-w-md mx-auto border-2 border-dashed border-[#344454] rounded-[10px] p-8 bg-[#0F151C] text-center">
-            <UploadCloud className="w-8 h-8 text-[#37B9FF] mx-auto mb-3" />
+          <div className="max-w-md mx-auto border-2 border-dashed border-border rounded-none p-8 bg-[#0F151C] text-center">
+            <UploadCloud className="w-8 h-8 text-accent mx-auto mb-3" />
             <input 
               type="file" 
               accept="video/mp4,video/x-m4v,video/*" 
               onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="text-xs text-[#A7B2BD] w-full cursor-pointer"
+              className="text-xs text-muted-foreground w-full cursor-pointer"
             />
             <button
               onClick={handleUpload}
               disabled={!file || isUploading}
-              className="mt-4 w-full px-4 py-2 bg-[#37B9FF] text-[#0A0F14] text-xs font-bold rounded-[7px] hover:bg-[#37B9FF]/90 transition-colors disabled:opacity-50"
+              className="mt-4 w-full px-4 py-2 bg-accent text-[#0A0F14] text-xs font-bold rounded-none hover:bg-accent/90 transition-colors disabled:opacity-50"
             >
               {isUploading ? 'Uploading & Queueing...' : 'Upload & Start AI Analysis'}
             </button>
@@ -237,16 +237,16 @@ export function VideoAnalysis({ cameraId }: VideoAnalysisProps) {
 
         {videoId && (
           <div className="space-y-6">
-            <div className="p-4 bg-[#0F151C] border border-[#263442] rounded-[8px]">
+            <div className="p-4 bg-[#0F151C] border border-border rounded-none">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-bold text-[#F3F6F8] truncate max-w-[280px]">
+                <span className="text-xs font-bold text-foreground truncate max-w-[280px]">
                   {fileName || file?.name || 'Uploaded Video'}
                 </span>
                 <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                  status === 'COMPLETED' ? 'bg-[#39D98A]/15 text-[#39D98A]' :
-                  status === 'PROCESSING' ? 'bg-[#37B9FF]/15 text-[#37B9FF] animate-pulse' :
+                  status === 'COMPLETED' ? 'bg-[#39D98A]/15 text-green-500' :
+                  status === 'PROCESSING' ? 'bg-accent/15 text-accent animate-pulse' :
                   status === 'QUEUED' ? 'bg-[#F4C95D]/15 text-[#F4C95D]' :
-                  'bg-[#FF5C67]/15 text-[#FF5C67]'
+                  'bg-red-500/15 text-red-500'
                 }`}>
                   {status === 'COMPLETED' && <CheckCircle className="w-3 h-3" />}
                   {status === 'QUEUED' && <Clock className="w-3 h-3" />}
@@ -254,15 +254,15 @@ export function VideoAnalysis({ cameraId }: VideoAnalysisProps) {
                   {status}
                 </span>
               </div>
-              <div className="w-full bg-[#18222C] rounded-full h-2.5 mb-1.5 overflow-hidden">
+              <div className="w-full bg-muted rounded-full h-2.5 mb-1.5 overflow-hidden">
                 <div 
                   className={`h-full rounded-full transition-all duration-300 ${
-                    status === 'COMPLETED' ? 'bg-[#39D98A]' : 'bg-[#37B9FF]'
+                    status === 'COMPLETED' ? 'bg-[#39D98A]' : 'bg-accent'
                   }`} 
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <div className="flex justify-between text-[11px] text-[#A7B2BD] font-mono">
+              <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
                 <span>{status === 'PROCESSING' ? 'AI Model Analyzing Frames...' : status === 'QUEUED' ? 'Waiting for ML Worker...' : 'Analysis Complete'}</span>
                 <span>{progress}%</span>
               </div>
@@ -279,13 +279,13 @@ export function VideoAnalysis({ cameraId }: VideoAnalysisProps) {
               <StatBox 
                 label="PERSONS DETECTED" 
                 value={stats.persons} 
-                icon={<User className="w-4 h-4 text-[#37B9FF]" />}
+                icon={<User className="w-4 h-4 text-accent" />}
                 color="#37B9FF"
               />
               <StatBox 
                 label="INTRUSIONS" 
                 value={stats.intrusions} 
-                icon={<AlertTriangle className="w-4 h-4 text-[#FF5C67]" />}
+                icon={<AlertTriangle className="w-4 h-4 text-red-500" />}
                 color="#FF5C67"
               />
               <StatBox 
@@ -298,29 +298,29 @@ export function VideoAnalysis({ cameraId }: VideoAnalysisProps) {
 
             {/* Recent Detection Stream */}
             {recentEvents.length > 0 && (
-              <div className="bg-[#0F151C] border border-[#263442] rounded-[8px] p-4 space-y-3">
-                <div className="text-xs font-semibold uppercase tracking-wider text-[#A7B2BD] flex items-center justify-between">
+              <div className="bg-[#0F151C] border border-border rounded-none p-4 space-y-3">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
                   <span>Live Object Detection Feed</span>
-                  <span className="text-[10px] text-[#39D98A] font-mono">ByteTrack Active</span>
+                  <span className="text-[10px] text-green-500 font-mono">ByteTrack Active</span>
                 </div>
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {recentEvents.map((ev, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded bg-[#141C24] border border-[#263442]/60">
+                    <div key={i} className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded bg-card border border-border/60">
                       <div className="flex items-center gap-2">
                         {ev.type.includes('VEHICLE') ? (
                           <Car className="w-3.5 h-3.5 text-[#F4C95D]" />
                         ) : (
-                          <User className="w-3.5 h-3.5 text-[#37B9FF]" />
+                          <User className="w-3.5 h-3.5 text-accent" />
                         )}
-                        <span className="font-semibold text-[#F3F6F8] capitalize">{ev.subType || ev.type}</span>
+                        <span className="font-semibold text-foreground capitalize">{ev.subType || ev.type}</span>
                         {ev.trackId !== undefined && (
-                          <span className="text-[10px] font-mono text-[#6E7B87]">Track #{ev.trackId}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground">Track #{ev.trackId}</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 font-mono text-[10px] text-[#A7B2BD]">
+                      <div className="flex items-center gap-3 font-mono text-[10px] text-muted-foreground">
                         {ev.frame !== undefined && <span>Frame {ev.frame}</span>}
                         {ev.confidence !== undefined && (
-                          <span className="text-[#39D98A]">{Math.round(ev.confidence * 100)}% conf</span>
+                          <span className="text-green-500">{Math.round(ev.confidence * 100)}% conf</span>
                         )}
                       </div>
                     </div>
@@ -337,12 +337,12 @@ export function VideoAnalysis({ cameraId }: VideoAnalysisProps) {
 
 function StatBox({ label, value, icon, color }: { label: string; value: number; icon?: React.ReactNode; color?: string }) {
   return (
-    <div className="p-4 bg-[#0F151C] border border-[#263442] rounded-[8px] flex flex-col justify-between">
+    <div className="p-4 bg-[#0F151C] border border-border rounded-none flex flex-col justify-between">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-[10px] uppercase font-bold text-[#6E7B87]">{label}</div>
+        <div className="text-[10px] uppercase font-bold text-muted-foreground">{label}</div>
         {icon}
       </div>
-      <div className="text-2xl font-bold text-[#F3F6F8]" style={{ color: value > 0 && color ? color : undefined }}>
+      <div className="text-2xl font-bold text-foreground" style={{ color: value > 0 && color ? color : undefined }}>
         {value}
       </div>
     </div>

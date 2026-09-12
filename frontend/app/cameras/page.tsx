@@ -39,13 +39,13 @@ export default function CamerasPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setIsUploadModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#18222C] border border-[#344454] hover:bg-[#1E2A35] text-[#F3F6F8] rounded-[7px] text-xs font-bold transition-all shadow-lg"
+              className="flex items-center gap-1.5 px-4 py-2 bg-muted border border-border hover:bg-muted text-foreground rounded-none text-xs font-bold transition-all shadow-lg"
             >
               Upload Custom Video
             </button>
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#37B9FF] hover:bg-[#37B9FF]/90 text-[#071018] rounded-[7px] text-xs font-bold transition-all shadow-lg"
+              className="flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent/90 text-[#071018] rounded-none text-xs font-bold transition-all shadow-lg"
             >
               <Plus className="w-4 h-4" />
               Add Camera
@@ -55,15 +55,15 @@ export default function CamerasPage() {
       />
 
       {/* Filter and Search Bar */}
-      <div className="bg-[#141C24] border border-[#263442] rounded-[10px] p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="bg-card border border-border rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6E7B87]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by ID, name, or sector location..."
-            className="w-full bg-[#0F151C] border border-[#263442] rounded-[7px] pl-9 pr-4 h-9 text-xs text-[#F3F6F8] placeholder:text-[#677480] focus:border-[#37B9FF] focus:outline-none"
+            className="w-full bg-[#0F151C] border border-border rounded-none pl-9 pr-4 h-9 text-xs text-foreground placeholder:text-[#677480] focus:border-[#37B9FF] focus:outline-none"
           />
         </div>
 

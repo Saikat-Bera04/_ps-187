@@ -58,7 +58,7 @@ async def process_video(job: Job, job_token: str):
                 "vehiclesDetected": vehicles,
                 "personsDetected": persons,
                 "events": events
-            }, timeout=5)
+            }, timeout=30)
         except Exception as e:
             logger.error(f"Failed to update progress to backend: {e}")
 
@@ -72,7 +72,7 @@ async def process_video(job: Job, job_token: str):
             "status": "COMPLETED",
             "vehiclesDetected": final_stats["vehicles"],
             "personsDetected": final_stats["persons"]
-        }, timeout=5)
+        }, timeout=30)
     except Exception as e:
         logger.error(f"Failed to finalize progress to backend: {e}")
 
